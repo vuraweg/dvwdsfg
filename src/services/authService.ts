@@ -120,8 +120,13 @@ const profileRole = data.user.user_metadata?.role || (isAdmin ? 'admin' : 'clien
     }
     console.log('AuthService: User signed up with Supabase. User ID:', data.user.id);
 
-    // Register device for new user
-    
+    try {
+      console.log('AuthService: Attempting to send welcome email...');
+      await this.sendWelcomeEmail(data.user.id, credentials.email, credentials.name.trim());
+      console.log('AuthService: Welcome email sent successfully');
+    } catch (emailError) {
+      console.warn('AuthService: Failed to send welcome email, but signup succeeded:', emailError);
+    }
 
     const signupResult = {
       needsVerification: !data.session,
@@ -304,8 +309,9 @@ const profileRole = profile?.role || (isAdmin ? 'admin' : 'client');
       throw new Error('Please enter a valid email address.');
     }
 
-    // Use the current origin as redirect URL
-    const redirectUrl = `${window.location.origin}/`;
+    const redirectUrl = `${window.location.origin}`;
+
+    console.log('AuthService: Password reset redirect URL:', redirectUrl);
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
@@ -520,17 +526,52 @@ Object.keys(dbUpdates).forEach((key) => {
         .select('metric_value')
         .eq('metric_name', 'total_resumes_created')
         .single();
-      
+
       if (error) {
         console.error('AuthService: Error fetching global resumes count:', error);
         return 50000; // Return default if fetch fails
       }
-      
+
       console.log('AuthService: Global resumes count fetched successfully:', data.metric_value);
       return data.metric_value;
     } catch (error) {
       console.error('AuthService: Error in getGlobalResumesCreatedCount catch block:', error);
       return 50000; // Return default if fetch fails
+    }
+  }
+
+  private async sendWelcomeEmail(userId: string, email: string, name: string): Promise<void> {
+    console.log('AuthService: Sending welcome email to:', email);
+
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/send-welcome-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({
+          userId: userId,
+          recipientEmail: email,
+          recipientName: name,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('AuthService: Welcome email API error:', errorText);
+        throw new Error(`Failed to send welcome email: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('AuthService: Welcome email sent successfully:', result);
+    } catch (error) {
+      console.error('AuthService: Error sending welcome email:', error);
+      throw error;
     }
   }
 }
