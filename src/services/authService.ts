@@ -302,28 +302,30 @@ const profileRole = profile?.role || (isAdmin ? 'admin' : 'client');
     console.log('AuthService: Logout process finished.');
   }
 
-  async forgotPassword(email: string): Promise<void> {
-    console.log('AuthService: Starting forgotPassword for email:', email);
+async forgotPassword(email: string): Promise<void> {
+  console.log('AuthService: Starting forgotPassword for email:', email);
 
-    if (!this.isValidEmail(email)) {
-      throw new Error('Please enter a valid email address.');
-    }
-
-    const redirectUrl = `${window.location.origin}`;
-
-    console.log('AuthService: Password reset redirect URL:', redirectUrl);
-
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl,
-    });
-
-    if (error) {
-      console.error('AuthService: resetPasswordForEmail error:', error);
-      throw new Error(error.message);
-    }
-
-    console.log('AuthService: Password reset email sent successfully to:', email);
+  if (!this.isValidEmail(email)) {
+    throw new Error('Please enter a valid email address.');
   }
+
+  // Use the full URL with hash for password reset
+  const redirectUrl = `${window.location.origin}/#type=recovery`;
+
+  console.log('AuthService: Password reset redirect URL:', redirectUrl);
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: redirectUrl,
+  });
+
+  if (error) {
+    console.error('AuthService: resetPasswordForEmail error:', error);
+    throw new Error(error.message);
+  }
+
+  console.log('AuthService: Password reset email sent successfully to:', email);
+}
+
 
 
   async resetPassword(newPassword: string): Promise<void> {
