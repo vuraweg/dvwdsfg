@@ -59,7 +59,6 @@ import { CognitivePathFinderPage } from './components/pages/CognitivePathFinderP
 import { KeyFinderPage } from './components/pages/KeyFinderPage';
 import { BubbleSelectionPage } from './components/pages/BubbleSelectionPage';
 
-
 function App() {
   const { isAuthenticated, user, markProfilePromptSeen, isLoading } = useAuth();
   const navigate = useNavigate();
@@ -609,7 +608,7 @@ const handleDiwaliCTAClick = useCallback(() => {
                       { id: '/blog', label: 'Blog', icon: <BookOpen className="w-5 h-5" /> },
                       { id: '/webinars', label: 'Webinars', icon: <Sparkles className="w-5 h-5" /> },
                       ...(isAuthenticated ? [{ id: '/my-webinars', label: 'My Webinars', icon: <Sparkles className="w-5 h-5" /> }] : []),
-             { id: '/gaming', label: 'Gaming', icon: <Gamepad2 className="w-5 h-5" /> }, // ADD THIS LINE
+             { id: '/gaming', label: 'Gaming', icon: <Gamepad2 className="w-5 h-5" /> },
                       { id: '/careers', label: 'Careers', icon: <Briefcase className="w-5 h-5" /> },
                       { id: '/jobs', label: 'Explore Jobs', icon: <Briefcase className="w-5 h-5" /> },
                     ...((user?.role === 'admin' || user?.email === 'primoboostai@gmail.com') ? [{ id: '/admin/jobs', label: 'Admin Panel', icon: <Crown className="w-5 h-5" /> }] : []),
