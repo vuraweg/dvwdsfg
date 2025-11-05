@@ -310,13 +310,22 @@ const handleDiwaliCTAClick = useCallback(() => {
   }, []);
 
   useEffect(() => {
+    // Check both hash and search params for password recovery
     const hash = window.location.hash;
-    if (hash.includes('type=recovery')) {
-      console.log('App.tsx: Detected password recovery link in URL hash.');
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlType = searchParams.get('type');
+    const accessToken = searchParams.get('access_token') || hash.includes('access_token');
+
+    // Supabase sends recovery links with query parameters: ?access_token=...&type=recovery
+    if ((urlType === 'recovery' || hash.includes('type=recovery')) && accessToken) {
+      console.log('App.tsx: Detected password recovery link in URL.');
       setAuthModalInitialView('reset_password');
       setShowAuthModal(true);
       setIsAuthModalOpenedByHash(true);
-      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+
+      // Clean up the URL to remove sensitive tokens
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState(null, '', cleanUrl);
     }
   }, []);
 

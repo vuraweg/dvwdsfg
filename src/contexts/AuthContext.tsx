@@ -266,8 +266,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const resetPassword = async (newPassword: string) => {
     console.log('AuthContext: Calling authService.resetPassword...');
-    await authService.resetPassword(newPassword);
-    console.log('AuthContext: authService.resetPassword completed.');
+    const { user, autoLoginSuccess } = await authService.resetPassword(newPassword);
+    console.log('AuthContext: authService.resetPassword completed. Auto-login:', autoLoginSuccess);
+
+    // If auto-login was successful, update the auth state
+    if (autoLoginSuccess && user) {
+      console.log('AuthContext: User automatically logged in after password reset.');
+      setAuthState({
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+      scheduleSessionRefresh(); // Schedule session refresh for the new session
+    }
   };
 
   const markProfilePromptSeen = async () => {

@@ -1,9 +1,9 @@
 // src/components/auth/ForgotPasswordForm.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Mail, AlertCircle, CheckCircle, Loader2, ArrowLeft } from 'lucide-react';
+import { Mail, AlertCircle, CheckCircle, Loader2, ArrowLeft, Clock, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const forgotPasswordSchema = z.object({
@@ -22,6 +22,8 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isRateLimited, setIsRateLimited] = useState(false);
+  const [retryAfter, setRetryAfter] = useState(0);
 
   const {
     register,
@@ -31,20 +33,60 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
     resolver: zodResolver(forgotPasswordSchema),
   });
 
+  // Countdown effect for rate limit
+  useEffect(() => {
+    if (retryAfter > 0) {
+      const timer = setInterval(() => {
+        setRetryAfter((prev) => {
+          if (prev <= 1) {
+            setIsRateLimited(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [retryAfter]);
+
   const onSubmit = async (data: ForgotPasswordData) => {
+    if (isRateLimited) {
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setSuccessMessage(null);
 
     try {
       await forgotPassword({ email: data.email });
-      setSuccessMessage('Reset link sent to your email!');
+      setSuccessMessage('Password reset email sent! Please check your inbox and spam folder.');
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.');
+      const errorMessage = err instanceof Error ? err.message : 'Something went wrong.';
+
+      // Check if it's a rate limit error
+      if (errorMessage.includes('Too many password reset attempts')) {
+        setIsRateLimited(true);
+        // Extract minutes from error message
+        const match = errorMessage.match(/(\d+) minute/);
+        if (match) {
+          const minutes = parseInt(match[1]);
+          setRetryAfter(minutes * 60);
+        }
+      }
+
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -53,17 +95,40 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
         <p className="text-gray-600 dark:text-gray-300 leading-relaxed">Enter your email to receive a reset link.</p>
       </div>
 
+      {/* Security info box */}
+      <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start dark:bg-blue-900/20 dark:border-blue-500/30">
+        <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-3 mt-0.5 flex-shrink-0" />
+        <div className="text-sm text-blue-700 dark:text-blue-300">
+          <p className="font-medium mb-1">Secure Password Reset</p>
+          <p className="text-xs text-blue-600 dark:text-blue-400">
+            The reset link will expire in 1 hour. For security, you can only request 3 resets per 15 minutes.
+          </p>
+        </div>
+      </div>
+
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start dark:bg-red-900/20 dark:border-red-500/50">
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 mt-0.5 flex-shrink-0" />
           <p className="text-red-700 dark:text-red-300 text-sm font-medium">{error}</p>
         </div>
       )}
 
+      {isRateLimited && retryAfter > 0 && (
+        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl flex items-start dark:bg-yellow-900/20 dark:border-yellow-500/30">
+          <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-3 mt-0.5 flex-shrink-0" />
+          <div className="text-sm">
+            <p className="text-yellow-700 dark:text-yellow-300 font-medium mb-1">Rate limit reached</p>
+            <p className="text-yellow-600 dark:text-yellow-400 text-xs">
+              Please wait {formatTime(retryAfter)} before requesting another reset.
+            </p>
+          </div>
+        </div>
+      )}
+
       {successMessage && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-700 flex items-start dark:bg-neon-cyan-500/10 dark:border-neon-cyan-400/50">
-          <CheckCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
-          <span className="text-sm font-medium">{successMessage}</span>
+        <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-700 flex items-start dark:bg-green-900/20 dark:border-green-500/50">
+          <CheckCircle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-green-600 dark:text-green-400" />
+          <span className="text-sm font-medium dark:text-green-300">{successMessage}</span>
         </div>
       )}
 
@@ -93,9 +158,9 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
 
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || isRateLimited}
           className={`w-full py-4 px-6 rounded-xl font-semibold text-white transition-all duration-300 flex items-center justify-center space-x-2 ${
-            isLoading
+            isLoading || isRateLimited
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 active:scale-[0.98] shadow-lg hover:shadow-xl'
           }`}
@@ -104,6 +169,11 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBackTo
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
               <span>Sending...</span>
+            </>
+          ) : isRateLimited ? (
+            <>
+              <Clock className="w-5 h-5" />
+              <span>Wait {formatTime(retryAfter)}</span>
             </>
           ) : (
             <>

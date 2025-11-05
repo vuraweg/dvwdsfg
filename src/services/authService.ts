@@ -309,6 +309,28 @@ async forgotPassword(email: string): Promise<void> {
     throw new Error('Please enter a valid email address.');
   }
 
+  // Check rate limit before sending reset email
+  try {
+    const { data: rateLimitCheck, error: rateLimitError } = await supabase.rpc(
+      'check_password_reset_rate_limit',
+      { p_email: email }
+    );
+
+    if (rateLimitError) {
+      console.error('AuthService: Rate limit check error:', rateLimitError);
+      // Continue even if rate limit check fails
+    } else if (rateLimitCheck && !rateLimitCheck.allowed) {
+      const minutes = Math.ceil(rateLimitCheck.retry_after_seconds / 60);
+      throw new Error(
+        `Too many password reset attempts. Please try again in ${minutes} minute${minutes > 1 ? 's' : ''}.`
+      );
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+  }
+
   // Use a simple redirect URL without hash
   const redirectUrl = 'https://primoboostai.in';
 
@@ -317,6 +339,18 @@ async forgotPassword(email: string): Promise<void> {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: redirectUrl,
   });
+
+  // Log the attempt
+  try {
+    await supabase.rpc('log_password_reset_attempt', {
+      p_email: email,
+      p_ip_address: null, // Could be captured from client if needed
+      p_user_agent: navigator.userAgent,
+      p_success: !error
+    });
+  } catch (logError) {
+    console.warn('AuthService: Failed to log password reset attempt:', logError);
+  }
 
   if (error) {
     console.error('AuthService: resetPasswordForEmail error:', error);
@@ -329,16 +363,75 @@ async forgotPassword(email: string): Promise<void> {
 
 
 
-  async resetPassword(newPassword: string): Promise<void> {
+  async resetPassword(newPassword: string): Promise<{ user: User; autoLoginSuccess: boolean }> {
     console.log('AuthService: Starting resetPassword.');
     const passwordValidation = this.validatePasswordStrength(newPassword);
     if (!passwordValidation.isValid) throw new Error(passwordValidation.message!);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    const { data, error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) {
       console.error('AuthService: updateUser password error:', error);
       throw new Error(error.message);
     }
+
     console.log('AuthService: Password reset successfully.');
+
+    // User is automatically logged in after password reset
+    // Fetch the full user profile
+    let autoLoginSuccess = false;
+    let userResult: User;
+
+    if (data.user) {
+      autoLoginSuccess = true;
+      console.log('AuthService: User automatically logged in after password reset.');
+
+      // Register device for tracking
+      try {
+        const deviceId = await deviceTrackingService.registerDevice(data.user.id);
+        if (deviceId) {
+          await deviceTrackingService.logActivity(data.user.id, 'password_reset', {
+            success: true,
+            timestamp: new Date().toISOString()
+          }, deviceId);
+        }
+      } catch (deviceError) {
+        console.warn('AuthService: Device tracking failed after password reset:', deviceError);
+      }
+
+      const profile = await this.fetchUserProfile(data.user.id);
+      const isAdmin = data.user.email === 'primoboostai@gmail.com';
+      const profileRole = profile?.role || (isAdmin ? 'admin' : 'client');
+
+      userResult = {
+        id: data.user.id,
+        name: profile?.full_name || data.user.email?.split('@')[0] || 'User',
+        email: profile?.email_address || data.user.email!,
+        phone: profile?.phone || undefined,
+        linkedin: profile?.linkedin_profile || undefined,
+        github: profile?.wellfound_profile || undefined,
+        referralCode: profile?.referral_code || undefined,
+        username: profile?.username || undefined,
+        isVerified: data.user.email_confirmed_at !== null,
+        createdAt: data.user.created_at || new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+        hasSeenProfilePrompt: profile?.has_seen_profile_prompt || false,
+        resumesCreatedCount: profile?.resumes_created_count || 0,
+        role: profileRole as 'admin' | 'client',
+      };
+    } else {
+      // Fallback if user data is not available (shouldn't happen)
+      userResult = {
+        id: '',
+        name: 'User',
+        email: '',
+        isVerified: false,
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+        role: 'client',
+      };
+    }
+
+    return { user: userResult, autoLoginSuccess };
   }
 
   async updateUserProfile(userId: string, updates: {

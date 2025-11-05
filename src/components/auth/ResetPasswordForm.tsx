@@ -32,6 +32,7 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ onSuccess,
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const {
     register,
@@ -44,10 +45,16 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ onSuccess,
   const onSubmit = async (data: ResetPasswordData) => {
     setIsLoading(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
       await resetPassword(data.password);
-      onSuccess();
+      setSuccessMessage('Password reset successful! You are now logged in.');
+
+      // Wait a moment to show the success message, then call onSuccess
+      setTimeout(() => {
+        onSuccess();
+      }, 1500);
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -87,6 +94,13 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ onSuccess,
         <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start dark:bg-red-900/20 dark:border-red-500/50">
           <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 mt-0.5" />
           <p className="text-red-700 dark:text-red-300 text-sm font-medium">{error}</p>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-start dark:bg-green-900/20 dark:border-green-500/50">
+          <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mr-3 mt-0.5" />
+          <p className="text-green-700 dark:text-green-300 text-sm font-medium">{successMessage}</p>
         </div>
       )}
 
