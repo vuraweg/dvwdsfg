@@ -311,7 +311,7 @@ const handleDiwaliCTAClick = useCallback(() => {
 
   useEffect(() => {
     const hash = window.location.hash;
-    if (hash.includes('/#type=recovery')) {
+    if (hash.includes('type=recovery')) {
       console.log('App.tsx: Detected password recovery link in URL hash.');
       setAuthModalInitialView('reset_password');
       setShowAuthModal(true);
