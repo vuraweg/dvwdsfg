@@ -3,12 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { X, CheckCircle, Sparkles, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, User as UserIcon, UserPlus } from 'lucide-react';
 import { LoginForm } from './LoginForm';
 import { SignupForm } from './SignupForm';
-import { ForgotPasswordForm } from './ForgotPasswordForm'; // Corrected import for named export
+import { ForgotPasswordForm } from './ForgotPasswordForm';
+import { ResetPasswordForm } from './ResetPasswordForm';
 
-import { useAuth } from '../../contexts/AuthContext'; // Uncommented this line
-
-// You will need to create this component as a named export (e.g., export const ResetPasswordForm)
-// import { ResetPasswordForm } from './ResetPasswordForm'; 
+import { useAuth } from '../../contexts/AuthContext'; 
 
 type AuthView = 'login' | 'signup' | 'forgot-password' | 'success' | 'postSignupPrompt' | 'reset_password';
 
@@ -172,27 +170,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
 
           {currentView === 'reset_password' && (
-            // You will need to create a ResetPasswordForm component as a named export
-            // import { ResetPasswordForm } from './ResetPasswordForm';
-            // Make sure to pass necessary props like onSuccess and onBackToLogin
-            // <ResetPasswordForm
-            //   onSuccess={() => {
-            //     setCurrentView('success');
-            //     setTimeout(() => onClose(), 2500);
-            //   }}
-            //   onBackToLogin={() => setCurrentView('login')}
-            // />
-            <div className="text-center py-6 sm:py-8">
-              <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
-                You can now set a new password. Please implement the `ResetPasswordForm` component.
-              </p>
-              <button
-                onClick={() => setCurrentView('login')}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-neon-blue-500 dark:hover:bg-neon-blue-600 text-white font-semibold py-3 rounded-xl transition-colors"
-              >
-                Back to Login
-              </button>
-            </div>
+            <ResetPasswordForm
+              onSuccess={() => {
+                setCurrentView('success');
+                setSignupEmail('');
+                setTimeout(() => {
+                  onClose();
+                  setCurrentView('login');
+                }, 2500);
+              }}
+              onBackToLogin={() => setCurrentView('login')}
+            />
           )}
 
           {currentView === 'success' && (
