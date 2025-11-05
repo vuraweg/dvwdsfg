@@ -309,13 +309,13 @@ async forgotPassword(email: string): Promise<void> {
     throw new Error('Please enter a valid email address.');
   }
 
-  // Use the full URL with hash for password reset
-  const redirectUrl = `${window.location.origin}/#type=recovery`;
-
-  console.log('AuthService: Password reset redirect URL:', redirectUrl);
+  // Get the current origin - should be https://primoboostai.in
+  const origin = window.location.origin;
+  
+  console.log('AuthService: Password reset redirect URL:', origin);
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: redirectUrl,
+    redirectTo: origin,
   });
 
   if (error) {
@@ -325,6 +325,7 @@ async forgotPassword(email: string): Promise<void> {
 
   console.log('AuthService: Password reset email sent successfully to:', email);
 }
+
 
 
 
