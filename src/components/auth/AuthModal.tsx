@@ -54,32 +54,39 @@ useEffect(() => {
 }, [isOpen, initialView, currentView, onPromptDismissed, isRecoveryMode]);
 
 
-  useEffect(() => {
-    console.log('AuthModal useEffect: Running. isAuthenticated:', isAuthenticated, 'user:', user, 'isOpen:', isOpen, 'currentView:', currentView);
+useEffect(() => {
+  console.log('AuthModal useEffect: Running. isAuthenticated:', isAuthenticated, 'user:', user, 'isOpen:', isOpen, 'currentView:', currentView, 'isRecoveryMode:', isRecoveryMode);
 
-    // Wait until authentication state and user profile are fully loaded
-    if (isAuthenticated && user && (user.hasSeenProfilePrompt === null || user.hasSeenProfilePrompt === undefined)) {
-      console.log('AuthModal useEffect: User authenticated, but profile prompt status not yet loaded. Waiting...');
-      return;
-    }
+  // MODIFIED: Skip auto-close logic if in recovery mode showing reset password
+  if (isRecoveryMode && currentView === 'reset_password') {
+    console.log('AuthModal useEffect: In recovery mode with reset_password view, skipping auto-close logic.');
+    return;
+  }
 
-    // If user is authenticated and profile is incomplete (hasSeenProfilePrompt is false)
-    if (isAuthenticated && user && user.hasSeenProfilePrompt === false && isOpen) {
-      console.log('AuthModal useEffect: User authenticated and profile incomplete, opening UserProfileManagement.');
-      // Call onProfileFillRequest to open the UserProfileManagement modal
-      onProfileFillRequest('profile');
-      // Immediately close this AuthModal as its job of prompting is done
-      onClose(); 
-    } else if (isAuthenticated && user && user.hasSeenProfilePrompt === true && isOpen) {
-      // If user is authenticated and profile is complete, ensure AuthModal is closed
-      console.log('AuthModal useEffect: User authenticated and profile complete, ensuring AuthModal is closed.');
-      onClose(); 
-    } else if (!isAuthenticated && isOpen) {
-      // If user is not authenticated and modal is open, ensure it's in a login/signup state
-      console.log('AuthModal useEffect: User not authenticated and modal is open. Ensuring login/signup view.');
-      // No explicit action needed here, as initialView is already set by App.tsx
-    }
-  }, [isAuthenticated, user, isOpen, onClose, onProfileFillRequest]);
+  // Wait until authentication state and user profile are fully loaded
+  if (isAuthenticated && user && (user.hasSeenProfilePrompt === null || user.hasSeenProfilePrompt === undefined)) {
+    console.log('AuthModal useEffect: User authenticated, but profile prompt status not yet loaded. Waiting...');
+    return;
+  }
+
+  // If user is authenticated and profile is incomplete (hasSeenProfilePrompt is false)
+  if (isAuthenticated && user && user.hasSeenProfilePrompt === false && isOpen) {
+    console.log('AuthModal useEffect: User authenticated and profile incomplete, opening UserProfileManagement.');
+    // Call onProfileFillRequest to open the UserProfileManagement modal
+    onProfileFillRequest('profile');
+    // Immediately close this AuthModal as its job of prompting is done
+    onClose(); 
+  } else if (isAuthenticated && user && user.hasSeenProfilePrompt === true && isOpen && !isRecoveryMode) {
+    // If user is authenticated and profile is complete, ensure AuthModal is closed (unless in recovery mode)
+    console.log('AuthModal useEffect: User authenticated and profile complete, ensuring AuthModal is closed.');
+    onClose(); 
+  } else if (!isAuthenticated && isOpen) {
+    // If user is not authenticated and modal is open, ensure it's in a login/signup state
+    console.log('AuthModal useEffect: User not authenticated and modal is open. Ensuring login/signup view.');
+    // No explicit action needed here, as initialView is already set by App.tsx
+  }
+}, [isAuthenticated, user, isOpen, onClose, onProfileFillRequest, currentView, isRecoveryMode]);
+
 
   if (!isOpen) {
     console.log('AuthModal is NOT open, returning null');
