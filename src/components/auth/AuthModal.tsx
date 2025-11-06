@@ -18,18 +18,22 @@ interface AuthModalProps {
   initialView?: AuthView;
   onProfileFillRequest?: (mode?: 'profile' | 'wallet') => void;
   onPromptDismissed?: () => void;
+  isRecoveryMode?: boolean; // NEW: Add recovery mode flag
 }
+
 
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
   initialView = 'login',
   onProfileFillRequest = () => {},
-  onPromptDismissed = () => {}
+  onPromptDismissed = () => {},
+  isRecoveryMode = false // NEW: Default to false
 }) => {
   const { user, isAuthenticated } = useAuth();
   const [currentView, setCurrentView] = useState<AuthView>(initialView);
   const [signupEmail, setSignupEmail] = useState<string>('');
+
 
   useEffect(() => {
     console.log('AuthModal isOpen prop changed:', isOpen);
