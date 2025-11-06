@@ -51,6 +51,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   useEffect(() => {
     console.log('AuthModal useEffect: Running. isAuthenticated:', isAuthenticated, 'user:', user, 'isOpen:', isOpen, 'currentView:', currentView, 'isRecoveryMode:', isRecoveryMode);
 
+    if (currentView === 'forgot-password' || currentView === 'success') {
+    console.log('AuthModal useEffect: In forgot-password or success view, skipping auto-close logic.');
+    return;
+  }
+
+    if (isRecoveryMode && currentView === 'reset_password') {
+    console.log('AuthModal useEffect: In recovery mode with reset_password view, skipping auto-close logic.');
+    return;
+  }
+
+
     // MODIFIED: Skip auto-close logic if in recovery mode showing reset password
     if (isRecoveryMode && currentView === 'reset_password') {
       console.log('AuthModal useEffect: In recovery mode with reset_password view, skipping auto-close logic.');
