@@ -332,7 +332,8 @@ async forgotPassword(email: string): Promise<void> {
   }
 
   // Get the current origin for redirect URL
-  const redirectUrl = window.location.origin;
+ const redirectUrl = `${window.location.origin}/reset-password`;
+
 
   console.log('AuthService: Password reset redirect URL:', redirectUrl);
 
