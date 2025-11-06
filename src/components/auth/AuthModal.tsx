@@ -189,17 +189,18 @@ useEffect(() => {
             />
           )}
 
-          {currentView === 'reset_password' && (
-            // You will need to create a ResetPasswordForm component as a named export
-            // import { ResetPasswordForm } from './ResetPasswordForm';
-            // Make sure to pass necessary props like onSuccess and onBackToLogin
-            // <ResetPasswordForm
-            //   onSuccess={() => {
-            //     setCurrentView('success');
-            //     setTimeout(() => onClose(), 2500);
-            //   }}
-            //   onBackToLogin={() => setCurrentView('login')}
-            // />
+         {currentView === 'reset_password' && (
+  <ResetPasswordForm
+    onSuccess={() => {
+      setCurrentView('success');
+      setSignupEmail('');
+      setTimeout(() => {
+        onClose(); // This will trigger the cleanup in App.tsx
+        setCurrentView('login');
+      }, 2500);
+    }}
+    onBackToLogin={() => setCurrentView('login')}
+  />
             <div className="text-center py-6 sm:py-8">
               <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
                 You can now set a new password. Please implement the `ResetPasswordForm` component.
