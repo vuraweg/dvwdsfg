@@ -189,30 +189,34 @@ useEffect(() => {
             />
           )}
 
-         {currentView === 'reset_password' && (
-  <ResetPasswordForm
-    onSuccess={() => {
-      setCurrentView('success');
-      setSignupEmail('');
-      setTimeout(() => {
-        onClose(); // This will trigger the cleanup in App.tsx
-        setCurrentView('login');
-      }, 2500);
-    }}
-    onBackToLogin={() => setCurrentView('login')}
-  />
-            <div className="text-center py-6 sm:py-8">
-              <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
-                You can now set a new password. Please implement the `ResetPasswordForm` component.
-              </p>
-              <button
-                onClick={() => setCurrentView('login')}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-neon-blue-500 dark:hover:bg-neon-blue-600 text-white font-semibold py-3 rounded-xl transition-colors"
-              >
-                Back to Login
-              </button>
-            </div>
-          )}
+      {currentView === 'reset_password' && (
+  <>
+    <ResetPasswordForm
+      onSuccess={() => {
+        setCurrentView('success');
+        setSignupEmail('');
+        setTimeout(() => {
+          onClose(); // This will trigger the cleanup in App.tsx
+          setCurrentView('login');
+        }, 2500);
+      }}
+      onBackToLogin={() => setCurrentView('login')}
+    />
+
+    <div className="text-center py-6 sm:py-8">
+      <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
+        You can now set a new password. Please implement the ResetPasswordForm component.
+      </p>
+      <button
+        onClick={() => setCurrentView('login')}
+        className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-neon-blue-500 dark:hover:bg-neon-blue-600 text-white font-semibold py-3 rounded-xl transition-colors"
+      >
+        Back to Login
+      </button>
+    </div>
+  </>
+)}
+
 
           {currentView === 'success' && (
             <div className="text-center py-6 sm:py-8">
