@@ -35,17 +35,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [signupEmail, setSignupEmail] = useState<string>('');
 
 
-  useEffect(() => {
-    console.log('AuthModal isOpen prop changed:', isOpen);
-    if (!isOpen && currentView === 'postSignupPrompt') {
-      onPromptDismissed();
-      setCurrentView('login');
-    }
-    // When the modal closes, reset the initial view to login
-    if (!isOpen) {
-      setCurrentView('login');
-    }
-  }, [isOpen, currentView, onPromptDismissed]);
+useEffect(() => {
+  console.log('AuthModal isOpen prop changed:', isOpen, 'initialView:', initialView, 'isRecoveryMode:', isRecoveryMode);
+  
+  // Update currentView when initialView changes and modal opens
+  if (isOpen && initialView !== currentView) {
+    setCurrentView(initialView);
+  }
+  
+  if (!isOpen && currentView === 'postSignupPrompt') {
+    onPromptDismissed();
+    setCurrentView('login');
+  }
+  // When the modal closes, reset the view to login (unless in recovery mode)
+  if (!isOpen && !isRecoveryMode) {
+    setCurrentView('login');
+  }
+}, [isOpen, initialView, currentView, onPromptDismissed, isRecoveryMode]);
+
 
   useEffect(() => {
     console.log('AuthModal useEffect: Running. isAuthenticated:', isAuthenticated, 'user:', user, 'isOpen:', isOpen, 'currentView:', currentView);
