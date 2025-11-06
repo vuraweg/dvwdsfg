@@ -58,6 +58,7 @@ import { AccenturePathFinderPage } from './components/pages/AccenturePathFinderP
 import { CognitivePathFinderPage } from './components/pages/CognitivePathFinderPage';
 import { KeyFinderPage } from './components/pages/KeyFinderPage';
 import { BubbleSelectionPage } from './components/pages/BubbleSelectionPage';
+import { ResetPasswordPage } from './components/pages/ResetPasswordPage';
 
 function App() {
   const { isAuthenticated, user, markProfilePromptSeen, isLoading } = useAuth();
@@ -86,8 +87,6 @@ function App() {
 
   const [isPostSignupProfileFlow, setIsPostSignupProfileFlow] = useState(false);
   const [walletRefreshKey, setWalletRefreshKey] = useState(0);
-  const [isAuthModalOpenedByHash, setIsAuthModalOpenedByHash] = useState(false);
-  const [isPasswordRecoveryMode, setIsPasswordRecoveryMode] = useState(false);
 
   const [showPlanSelectionModal, setShowPlanSelectionModal] = useState(false);
   const [planSelectionFeatureId, setPlanSelectionFeatureId] = useState<string | undefined>(undefined);
@@ -321,24 +320,28 @@ const handleDiwaliCTAClick = useCallback(() => {
     // or hash fragments: #access_token=...&type=recovery
     const isRecoveryLink = (urlType === 'recovery' || hash.includes('type=recovery')) && (accessToken || hashAccessToken);
 
-    if (isRecoveryLink) {
-      console.log('App.tsx: Detected password recovery link in URL.');
+    if (isRecoveryLink && location.pathname !== '/reset-password') {
+      console.log('App.tsx: Detected password recovery link in URL. Redirecting to /reset-password');
       console.log('App.tsx: Type:', urlType, 'Has access token:', !!(accessToken || hashAccessToken));
 
-      setAuthModalInitialView('reset_password');
-      setShowAuthModal(true);
-      setIsAuthModalOpenedByHash(true);
-      setIsPasswordRecoveryMode(true);
+      // Redirect to dedicated reset password page with all URL parameters
+      const fullUrl = window.location.href;
+      const url = new URL(fullUrl);
+      const params = new URLSearchParams(url.search);
 
-      // Clean up the URL to remove sensitive tokens after a short delay
-      // to ensure Supabase client has time to process them
-      setTimeout(() => {
-        const cleanUrl = window.location.origin + window.location.pathname;
-        window.history.replaceState(null, '', cleanUrl);
-        console.log('App.tsx: URL cleaned after password recovery detection.');
-      }, 1000);
+      // If tokens are in hash, extract them
+      if (hash) {
+        const hashParams = new URLSearchParams(hash.substring(1));
+        hashParams.forEach((value, key) => {
+          if (!params.has(key)) {
+            params.set(key, value);
+          }
+        });
+      }
+
+      navigate(`/reset-password?${params.toString()}`, { replace: true });
     }
-  }, []);
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     console.log(
@@ -349,36 +352,11 @@ const handleDiwaliCTAClick = useCallback(() => {
       'hasSeenProfilePrompt:',
       user?.hasSeenProfilePrompt,
       'isLoadingAuth:',
-      isLoading,
-      'isAuthModalOpenedByHash:',
-      isAuthModalOpenedByHash,
-      'isPasswordRecoveryMode:',
-      isPasswordRecoveryMode
+      isLoading
     );
 
     if (isLoading) {
       console.log('App.tsx useEffect: AuthContext is still loading, deferring AuthModal logic.');
-      return;
-    }
-
-    // If in password recovery mode, don't auto-close the modal
-    if (isPasswordRecoveryMode) {
-      console.log('App.tsx useEffect: In password recovery mode, keeping modal open.');
-      return;
-    }
-
-    if (isAuthModalOpenedByHash) {
-      if (isAuthenticated && user && user.hasSeenProfilePrompt === true) {
-        console.log('App.tsx useEffect: Hash-opened modal, user authenticated and profile complete. Closing modal.');
-        setShowAuthModal(false);
-        setIsAuthModalOpenedByHash(false);
-        setAuthModalInitialView('login');
-        setIsPasswordRecoveryMode(false);
-        if (postAuthCallback) {
-          postAuthCallback();
-          setPostAuthCallback(null);
-        }
-      }
       return;
     }
 
@@ -404,7 +382,7 @@ const handleDiwaliCTAClick = useCallback(() => {
       console.log('App.tsx useEffect: User not authenticated, ensuring AuthModal is closed.');
       setAuthModalInitialView('login');
     }
-  }, [isAuthenticated, user, user?.hasSeenProfilePrompt, isLoading, isAuthModalOpenedByHash, postAuthCallback]);
+  }, [isAuthenticated, user, user?.hasSeenProfilePrompt, isLoading, postAuthCallback]);
 
   useEffect(() => {
     console.log('App.tsx: showProfileManagement state changed to:', showProfileManagement);
@@ -515,6 +493,7 @@ const handleDiwaliCTAClick = useCallback(() => {
           <Route path="/cognitive-pathfinder" element={<CognitivePathFinderPage />} />
           <Route path="/key-finder" element={<KeyFinderPage />} />
           <Route path="/bubble-selection" element={<BubbleSelectionPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/admin/jobs"
             element={
@@ -696,8 +675,6 @@ const handleDiwaliCTAClick = useCallback(() => {
             }
             setShowAuthModal(false);
             setAuthModalInitialView('login');
-            setIsAuthModalOpenedByHash(false);
-            setIsPasswordRecoveryMode(false);
           }}
           onProfileFillRequest={() => handleShowProfile('profile', true)}
           initialView={authModalInitialView}
@@ -707,10 +684,7 @@ const handleDiwaliCTAClick = useCallback(() => {
             }
             setShowAuthModal(false);
             setAuthModalInitialView('login');
-            setIsAuthModalOpenedByHash(false);
-            setIsPasswordRecoveryMode(false);
           }}
-          isRecoveryMode={isPasswordRecoveryMode}
         />
 
         <PlanSelectionModal

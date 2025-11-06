@@ -7,7 +7,7 @@ import { ForgotPasswordForm } from './ForgotPasswordForm';
 import { ResetPasswordForm } from './ResetPasswordForm';
 import { useAuth } from '../../contexts/AuthContext';
 
-type AuthView = 'login' | 'signup' | 'forgot-password' | 'success' | 'postSignupPrompt' | 'reset_password';
+type AuthView = 'login' | 'signup' | 'forgot-password' | 'success' | 'postSignupPrompt';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -100,7 +100,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       case 'login': return 'Welcome Back';
       case 'signup': return 'Join Resume Optimizer';
       case 'forgot-password': return 'Reset Password';
-      case 'reset_password': return 'Reset Your Password';
       case 'success': return 'Success!';
       case 'postSignupPrompt': return 'Account Created!';
       default: return 'Authentication';
@@ -129,7 +128,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               {currentView === 'login' && 'Sign in to optimize your resume with AI'}
               {currentView === 'signup' && 'Create your account and start optimizing'}
               {currentView === 'forgot-password' && 'We\'ll help you reset your password'}
-              {currentView === 'reset_password' && 'Enter your new password below.'}
               {currentView === 'success' && 'Everything is set up perfectly!'}
               {currentView === 'postSignupPrompt' && 'Your account is ready!'}
             </p>
@@ -162,19 +160,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <ForgotPasswordForm
               onBackToLogin={() => setCurrentView('login')}
               onSuccess={handleForgotPasswordSuccess}
-            />
-          )}
-
-          {currentView === 'reset_password' && (
-            <ResetPasswordForm
-              onSuccess={() => {
-                setCurrentView('success');
-                setTimeout(() => {
-                  onClose();
-                  setCurrentView('login');
-                }, 2500);
-              }}
-              onBackToLogin={() => setCurrentView('login')}
             />
           )}
 
