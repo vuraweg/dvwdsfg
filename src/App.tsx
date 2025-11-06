@@ -344,45 +344,53 @@ const handleDiwaliCTAClick = useCallback(() => {
   }, [location.pathname, navigate]);
 
   useEffect(() => {
-    console.log(
-      'App.tsx useEffect: isAuthenticated:',
-      isAuthenticated,
-      'user:',
-      user?.id,
-      'hasSeenProfilePrompt:',
-      user?.hasSeenProfilePrompt,
-      'isLoadingAuth:',
-      isLoading
-    );
+  console.log(
+    'App.tsx useEffect: isAuthenticated:',
+    isAuthenticated,
+    'user:',
+    user?.id,
+    'hasSeenProfilePrompt:',
+    user?.hasSeenProfilePrompt,
+    'isLoadingAuth:',
+    isLoading
+  );
 
-    if (isLoading) {
-      console.log('App.tsx useEffect: AuthContext is still loading, deferring AuthModal logic.');
+  if (isLoading) {
+    console.log('App.tsx useEffect: AuthContext is still loading, deferring AuthModal logic.');
+    return;
+  }
+
+  // MODIFIED: Removed auto-opening of AuthModal for incomplete profiles
+  // Users can manually access profile settings from the menu
+  
+  if (isAuthenticated && user) {
+    if (user.hasSeenProfilePrompt === undefined) {
+      console.log('App.tsx useEffect: user.hasSeenProfilePrompt is undefined, waiting for full profile load.');
       return;
     }
-
-    if (isAuthenticated && user) {
-      if (user.hasSeenProfilePrompt === undefined) {
-        console.log('App.tsx useEffect: user.hasSeenProfilePrompt is undefined, waiting for full profile load.');
-        return;
-      }
-      if (user.hasSeenProfilePrompt === false) {
-        console.log('App.tsx useEffect: User authenticated and profile incomplete, opening AuthModal to prompt.');
-        setAuthModalInitialView('postSignupPrompt');
-        setShowAuthModal(true);
-      } else {
-        console.log('App.tsx useEffect: User authenticated and profile complete, ensuring AuthModal is closed.');
-        setShowAuthModal(false);
-        setAuthModalInitialView('login');
-        if (postAuthCallback) {
-          postAuthCallback();
-          setPostAuthCallback(null);
-        }
-      }
-    } else {
-      console.log('App.tsx useEffect: User not authenticated, ensuring AuthModal is closed.');
+    
+    // REMOVED: Auto-show profile prompt
+    // if (user.hasSeenProfilePrompt === false) {
+    //   console.log('App.tsx useEffect: User authenticated and profile incomplete, opening AuthModal to prompt.');
+    //   setAuthModalInitialView('postSignupPrompt');
+    //   setShowAuthModal(true);
+    // }
+    
+    if (user.hasSeenProfilePrompt === true) {
+      console.log('App.tsx useEffect: User authenticated and profile complete, ensuring AuthModal is closed.');
+      setShowAuthModal(false);
       setAuthModalInitialView('login');
+      if (postAuthCallback) {
+        postAuthCallback();
+        setPostAuthCallback(null);
+      }
     }
-  }, [isAuthenticated, user, user?.hasSeenProfilePrompt, isLoading, postAuthCallback]);
+  } else {
+    console.log('App.tsx useEffect: User not authenticated, ensuring AuthModal is closed.');
+    setAuthModalInitialView('login');
+  }
+}, [isAuthenticated, user, user?.hasSeenProfilePrompt, isLoading, postAuthCallback]);
+
 
   useEffect(() => {
     console.log('App.tsx: showProfileManagement state changed to:', showProfileManagement);
