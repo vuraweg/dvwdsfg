@@ -87,6 +87,7 @@ function App() {
   const [isPostSignupProfileFlow, setIsPostSignupProfileFlow] = useState(false);
   const [walletRefreshKey, setWalletRefreshKey] = useState(0);
   const [isAuthModalOpenedByHash, setIsAuthModalOpenedByHash] = useState(false);
+  const [isPasswordRecoveryMode, setIsPasswordRecoveryMode] = useState(false);
 
   const [showPlanSelectionModal, setShowPlanSelectionModal] = useState(false);
   const [planSelectionFeatureId, setPlanSelectionFeatureId] = useState<string | undefined>(undefined);
@@ -313,18 +314,29 @@ const handleDiwaliCTAClick = useCallback(() => {
     const hash = window.location.hash;
     const searchParams = new URLSearchParams(window.location.search);
     const urlType = searchParams.get('type');
-    const accessToken = searchParams.get('access_token') || hash.includes('access_token');
+    const accessToken = searchParams.get('access_token');
+    const hashAccessToken = hash.includes('access_token');
 
     // Supabase sends recovery links with query parameters: ?access_token=...&type=recovery
-    if ((urlType === 'recovery' || hash.includes('type=recovery')) && accessToken) {
+    // or hash fragments: #access_token=...&type=recovery
+    const isRecoveryLink = (urlType === 'recovery' || hash.includes('type=recovery')) && (accessToken || hashAccessToken);
+
+    if (isRecoveryLink) {
       console.log('App.tsx: Detected password recovery link in URL.');
+      console.log('App.tsx: Type:', urlType, 'Has access token:', !!(accessToken || hashAccessToken));
+
       setAuthModalInitialView('reset_password');
       setShowAuthModal(true);
       setIsAuthModalOpenedByHash(true);
+      setIsPasswordRecoveryMode(true);
 
-      // Clean up the URL to remove sensitive tokens
-      const cleanUrl = window.location.origin + window.location.pathname;
-      window.history.replaceState(null, '', cleanUrl);
+      // Clean up the URL to remove sensitive tokens after a short delay
+      // to ensure Supabase client has time to process them
+      setTimeout(() => {
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState(null, '', cleanUrl);
+        console.log('App.tsx: URL cleaned after password recovery detection.');
+      }, 1000);
     }
   }, []);
 
@@ -339,11 +351,19 @@ const handleDiwaliCTAClick = useCallback(() => {
       'isLoadingAuth:',
       isLoading,
       'isAuthModalOpenedByHash:',
-      isAuthModalOpenedByHash
+      isAuthModalOpenedByHash,
+      'isPasswordRecoveryMode:',
+      isPasswordRecoveryMode
     );
 
     if (isLoading) {
       console.log('App.tsx useEffect: AuthContext is still loading, deferring AuthModal logic.');
+      return;
+    }
+
+    // If in password recovery mode, don't auto-close the modal
+    if (isPasswordRecoveryMode) {
+      console.log('App.tsx useEffect: In password recovery mode, keeping modal open.');
       return;
     }
 
@@ -353,6 +373,7 @@ const handleDiwaliCTAClick = useCallback(() => {
         setShowAuthModal(false);
         setIsAuthModalOpenedByHash(false);
         setAuthModalInitialView('login');
+        setIsPasswordRecoveryMode(false);
         if (postAuthCallback) {
           postAuthCallback();
           setPostAuthCallback(null);
@@ -676,6 +697,7 @@ const handleDiwaliCTAClick = useCallback(() => {
             setShowAuthModal(false);
             setAuthModalInitialView('login');
             setIsAuthModalOpenedByHash(false);
+            setIsPasswordRecoveryMode(false);
           }}
           onProfileFillRequest={() => handleShowProfile('profile', true)}
           initialView={authModalInitialView}
@@ -686,7 +708,9 @@ const handleDiwaliCTAClick = useCallback(() => {
             setShowAuthModal(false);
             setAuthModalInitialView('login');
             setIsAuthModalOpenedByHash(false);
+            setIsPasswordRecoveryMode(false);
           }}
+          isRecoveryMode={isPasswordRecoveryMode}
         />
 
         <PlanSelectionModal

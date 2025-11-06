@@ -149,14 +149,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           {currentView === 'reset_password' && (
             <ResetPasswordForm
               onSuccess={() => {
-                setCurrentView('success');
+                setCurrentView('login');
                 setSignupEmail('');
+                // Close the modal after password reset success
                 setTimeout(() => {
-                  onClose(); // This will trigger the cleanup in App.tsx
-                  setCurrentView('login');
-                }, 2500);
+                  onClose();
+                }, 1500);
               }}
-              onBackToLogin={() => setCurrentView('login')}
+              onBackToLogin={() => {
+                setCurrentView('login');
+                onClose();
+              }}
             />
           )}
         </div>

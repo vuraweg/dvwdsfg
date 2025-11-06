@@ -331,8 +331,8 @@ async forgotPassword(email: string): Promise<void> {
     }
   }
 
-  // Use a simple redirect URL without hash
-  const redirectUrl = 'https://primoboostai.in';
+  // Get the current origin for redirect URL
+  const redirectUrl = window.location.origin;
 
   console.log('AuthService: Password reset redirect URL:', redirectUrl);
 
