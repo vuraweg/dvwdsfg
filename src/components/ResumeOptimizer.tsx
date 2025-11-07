@@ -446,6 +446,32 @@ const checkForMissingSections = useCallback((resumeData: ResumeData): string[] =
       alert('Failed to continue optimization. Please try again.');
       setIsOptimizing(false);
     }
+    const missing = checkForMissingSections(baseResume);
+
+// DEBUG: Log missing sections detection
+console.log('🔍 Missing Sections Check:', {
+  totalMissing: missing.length,
+  missingSections: missing,
+  resumeData: {
+    hasWorkExperience: baseResume.workExperience?.length > 0,
+    hasProjects: baseResume.projects?.length > 0,
+    hasSkills: baseResume.skills?.length > 0,
+    hasEducation: baseResume.education?.length > 0,
+    hasCertifications: baseResume.certifications?.length > 0,
+    hasPhone: !!baseResume.phone,
+    hasEmail: !!baseResume.email
+  }
+});
+
+if (missing.length > 0) {
+  console.log('✅ Opening Missing Sections Modal');
+  setMissingSections(missing);
+  setPendingResumeData(baseResume);
+  setShowMissingSectionsModal(true);
+  setIsOptimizing(false);
+  return;
+}
+
   }, [handleInitialResumeProcessing]); // Dependencies for memoized function
 
   const handleMissingSectionsProvided = useCallback(async (data: any) => {
