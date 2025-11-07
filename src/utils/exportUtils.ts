@@ -11,12 +11,12 @@ const createPDFConfig = (options: ExportOptions) => ({
   pageWidth: 210,
   pageHeight: 297, // Changed from 300 to 297 for standard A4
 
-  // Professional margins in mm (0.7 inch = 17.78mm)
+  // Professional margins in mm (0.7 inch = 17.78mm) - ATS Optimized
   margins: {
-    top: options.layoutType === 'compact' ? 12 : 17.78, // Adjusted for standard
-    bottom: options.layoutType === 'compact' ? 12 : 17.78, // Adjusted for standard
-    left: options.layoutType === 'compact' ? 12 : 17.78, // Adjusted for standard
-    right: options.layoutType === 'compact' ? 12 : 17.78 // Adjusted for standard
+    top: options.layoutType === 'compact' ? 12 : options.layoutType === 'ats-optimized' ? 17.78 : 17.78,
+    bottom: options.layoutType === 'compact' ? 12 : options.layoutType === 'ats-optimized' ? 17.78 : 17.78,
+    left: options.layoutType === 'compact' ? 12 : options.layoutType === 'ats-optimized' ? 17.78 : 17.78,
+    right: options.layoutType === 'compact' ? 12 : options.layoutType === 'ats-optimized' ? 17.78 : 17.78
   },
 
   // Calculated content area
@@ -34,15 +34,15 @@ const createPDFConfig = (options: ExportOptions) => ({
     body: { size: options.bodyTextSize, weight: 'normal' }
   },
   spacing: {
-    nameFromTop: 10, // Changed from 13 to 10
+    nameFromTop: 10,
     afterName: 0,
-    afterContact: 2, // Changed from 3 to 2
-    sectionSpacingBefore: options.sectionSpacing, // Space before section title
-    sectionSpacingAfter: 2, // Space after section underline
-    bulletListSpacing: 0.5, // Changed from options.entrySpacing * 0.3 to 0.5
-    afterSubsection: 3, // Space between sub-sections (e.g., jobs, projects)
-    lineHeight: 1.2, // Tighter line height
-    bulletIndent: 5, // Changed from 4 to 5
+    afterContact: 2,
+    sectionSpacingBefore: options.sectionSpacing,
+    sectionSpacingAfter: 2,
+    bulletListSpacing: 0.5,
+    afterSubsection: 3,
+    lineHeight: options.layoutType === 'ats-optimized' ? 1.1 : 1.2,
+    bulletIndent: 5,
     entrySpacing: options.entrySpacing
   },
   colors: {
@@ -269,7 +269,7 @@ function drawContactInfo(state: PageState, resumeData: ResumeData, PDF_CONFIG: a
 function drawWorkExperience(state: PageState, workExperience: any[], userType: UserType = 'experienced', PDF_CONFIG: any): number {
   if (!workExperience || workExperience.length === 0) return 0;
 
-  const sectionTitle = (userType === 'fresher' || userType === 'student') ? 'WORK EXPERIENCE' : 'PROFESSIONAL EXPERIENCE';
+  const sectionTitle = (userType === 'fresher' || userType === 'student') ? 'Work Experience' : 'Professional Experience';
   let totalHeight = drawSectionTitle(state, sectionTitle, PDF_CONFIG);
 
   workExperience.forEach((job, index) => {
@@ -328,7 +328,7 @@ function drawWorkExperience(state: PageState, workExperience: any[], userType: U
 // Draw education section
 function drawEducation(state: PageState, education: any[], PDF_CONFIG: any): number {
   if (!education || education.length === 0) return 0;
-  let totalHeight = drawSectionTitle(state, 'EDUCATION', PDF_CONFIG);
+  let totalHeight = drawSectionTitle(state, 'Education', PDF_CONFIG);
 
   education.forEach((edu, index) => {
     const initialYForEdu = state.currentY;
@@ -382,7 +382,7 @@ function drawProjects(state: PageState, projects: any[], PDF_CONFIG: any): numbe
   if (!projects || projects.length === 0) return 0;
 
   const githubProjects = projects.filter(project => project.githubUrl);
-  let totalHeight = drawSectionTitle(state, 'PROJECTS', PDF_CONFIG);
+  let totalHeight = drawSectionTitle(state, 'Projects', PDF_CONFIG);
 
   projects.forEach((project, index) => {
     if (!checkPageSpace(state, 25, PDF_CONFIG)) {
@@ -423,7 +423,7 @@ function drawProjects(state: PageState, projects: any[], PDF_CONFIG: any): numbe
 function drawSkills(state: PageState, skills: any[], PDF_CONFIG: any): number {
   if (!skills || skills.length === 0) return 0;
 
-  let totalHeight = drawSectionTitle(state, 'SKILLS', PDF_CONFIG);
+  let totalHeight = drawSectionTitle(state, 'Skills', PDF_CONFIG);
   const estimatedSkillLineHeight = PDF_CONFIG.fonts.body.size * PDF_CONFIG.spacing.lineHeight * 0.352778;
 
   skills.forEach((skill, index) => {
@@ -469,9 +469,16 @@ function drawSkills(state: PageState, skills: any[], PDF_CONFIG: any): number {
 
 // Draw certifications section
 function drawCertifications(state: PageState, certifications: (string | Certification)[], PDF_CONFIG: any): number {
-  if (!certifications || certifications.length === 0) return 0;
+  let totalHeight = drawSectionTitle(state, 'Certifications', PDF_CONFIG);
 
-  let totalHeight = drawSectionTitle(state, 'CERTIFICATIONS', PDF_CONFIG);
+  if (!certifications || certifications.length === 0) {
+    const placeholderHeight = drawText(state, 'Available upon request', PDF_CONFIG.margins.left + PDF_CONFIG.spacing.bulletIndent, PDF_CONFIG, {
+      fontSize: PDF_CONFIG.fonts.body.size,
+      maxWidth: PDF_CONFIG.contentWidth - PDF_CONFIG.spacing.bulletIndent
+    });
+    totalHeight += placeholderHeight;
+    return totalHeight;
+  }
 
   certifications.forEach((cert) => {
     if (!checkPageSpace(state, 10, PDF_CONFIG)) {
@@ -511,7 +518,7 @@ function drawCertifications(state: PageState, certifications: (string | Certific
 function drawProfessionalSummary(state: PageState, summary: string, PDF_CONFIG: any): number {
   if (!summary) return 0;
 
-  let totalHeight = drawSectionTitle(state, 'PROFESSIONAL SUMMARY', PDF_CONFIG);
+  let totalHeight = drawSectionTitle(state, 'Professional Summary', PDF_CONFIG);
   const summaryHeight = drawText(state, summary, PDF_CONFIG.margins.left, PDF_CONFIG, {
     fontSize: PDF_CONFIG.fonts.body.size,
     fontWeight: PDF_CONFIG.fonts.body.weight,
@@ -525,7 +532,7 @@ function drawProfessionalSummary(state: PageState, summary: string, PDF_CONFIG: 
 // Draw career objective section for students
 function drawCareerObjective(state: PageState, objective: string, PDF_CONFIG: any): number {
   if (!objective) return 0;
-  let totalHeight = drawSectionTitle(state, 'CAREER OBJECTIVE', PDF_CONFIG);
+  let totalHeight = drawSectionTitle(state, 'Career Objective', PDF_CONFIG);
   state.currentY += 3;
   const objectiveHeight = drawText(state, objective, PDF_CONFIG.margins.left, PDF_CONFIG, {
     fontSize: PDF_CONFIG.fonts.body.size,
@@ -542,7 +549,7 @@ function drawAchievementsAndExtras(state: PageState, resumeData: ResumeData, PDF
   const hasAchievements = resumeData.achievements && resumeData.achievements.length > 0;
   if (!hasAchievements) return 0;
 
-  let totalHeight = drawSectionTitle(state, 'ACHIEVEMENTS', PDF_CONFIG);
+  let totalHeight = drawSectionTitle(state, 'Achievements', PDF_CONFIG);
 
   resumeData.achievements.forEach(item => {
     if (!checkPageSpace(state, 10, PDF_CONFIG)) {
@@ -563,7 +570,7 @@ function drawAchievementsAndExtras(state: PageState, resumeData: ResumeData, PDF
 function drawAdditionalSection(state: PageState, section: { title: string; bullets: string[] }, PDF_CONFIG: any): number {
   if (!section || !section.title || !section.bullets || section.bullets.length === 0) return 0;
 
-  let totalHeight = drawSectionTitle(state, section.title.toUpperCase(), PDF_CONFIG);
+  let totalHeight = drawSectionTitle(state, section.title, PDF_CONFIG);
 
   section.bullets.forEach(bullet => {
     if (!checkPageSpace(state, 10, PDF_CONFIG)) {

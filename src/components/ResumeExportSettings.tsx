@@ -4,6 +4,8 @@ import { Download, Settings, Type, LayoutGrid as Layout, Ruler, CheckCircle, Ale
 import { ExportOptions, defaultExportOptions, LayoutType, PaperSize, layoutConfigs, paperSizeConfigs } from '../types/export';
 import { ResumePreview } from './ResumePreview';
 import { ResumeData, UserType } from '../types/resume';
+import { ATSCompatibilityChecker } from './ATSCompatibilityChecker';
+import { ATSExportValidationModal } from './ATSExportValidationModal';
 
 interface ResumeExportSettingsProps {
   resumeData: ResumeData;
@@ -22,6 +24,8 @@ export const ResumeExportSettings: React.FC<ResumeExportSettingsProps> = ({
 }) => {
   const [options, setOptions] = useState<ExportOptions>(defaultExportOptions);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [pendingFormat, setPendingFormat] = useState<'pdf' | 'word' | null>(null);
 
   const handleOptionChange = (key: keyof ExportOptions, value: any) => {
     setOptions(prev => {
@@ -39,15 +43,24 @@ export const ResumeExportSettings: React.FC<ResumeExportSettingsProps> = ({
   };
 
   const handleExportClick = (format: 'pdf' | 'word') => {
+    setPendingFormat(format);
+    setShowValidationModal(true);
+  };
+
+  const handleProceedWithExport = () => {
+    if (!pendingFormat) return;
+
     try {
-      onExport(options, format);
-      setStatusMessage(`${format.toUpperCase()} export initiated successfully!`);
+      onExport(options, pendingFormat);
+      setStatusMessage(`${pendingFormat.toUpperCase()} export initiated successfully!`);
+      setShowValidationModal(false);
+      setPendingFormat(null);
       setTimeout(() => {
         setStatusMessage(null);
       }, 3000);
     } catch (error) {
       console.error('Error during export:', error);
-      setStatusMessage(`Error initiating ${format.toUpperCase()} export. Please try again.`);
+      setStatusMessage(`Error initiating ${pendingFormat.toUpperCase()} export. Please try again.`);
       setTimeout(() => {
         setStatusMessage(null);
       }, 5000);
@@ -74,7 +87,6 @@ export const ResumeExportSettings: React.FC<ResumeExportSettingsProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-300">Layout Type</label>
             <div className="grid grid-cols-2 gap-4">
                         {Object.entries(layoutConfigs)
-              .filter(([key]) => key === 'standard') // Add this filter
               .map(([key, config]) => (
                 <button
                   key={key}
@@ -90,10 +102,10 @@ export const ResumeExportSettings: React.FC<ResumeExportSettingsProps> = ({
                   </div>
                   <span className="font-medium text-sm dark:text-gray-100">{config.name}</span>
                   <span className="text-xs text-gray-500 text-center dark:text-gray-300">{config.description}</span>
-                  {key === 'standard' && (
+                  {config.recommended && (
                     <div className="mt-2 flex items-center">
                       <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
-                      <span className="text-xs text-green-600 font-medium">★ Recommended</span>
+                      <span className="text-xs text-green-600 font-medium dark:text-green-400">★ ATS Optimized</span>
                     </div>
                   )}
                 </button>
@@ -225,6 +237,9 @@ export const ResumeExportSettings: React.FC<ResumeExportSettingsProps> = ({
           </div>
         </div>
 
+        {/* ATS Compatibility Checker */}
+        <ATSCompatibilityChecker resumeData={resumeData} exportOptions={options} />
+
         {/* Export Buttons */}
         <div className="card p-4 sm:p-6">
           <div className="space-y-4">
@@ -282,6 +297,18 @@ export const ResumeExportSettings: React.FC<ResumeExportSettingsProps> = ({
           </div>
         </div>
       )}
+
+      <ATSExportValidationModal
+        isOpen={showValidationModal}
+        onClose={() => {
+          setShowValidationModal(false);
+          setPendingFormat(null);
+        }}
+        onProceed={handleProceedWithExport}
+        resumeData={resumeData}
+        exportOptions={options}
+        format={pendingFormat || 'pdf'}
+      />
     </div>
   );
 };

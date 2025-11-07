@@ -1,4 +1,4 @@
-export type LayoutType = 'standard' | 'compact';
+export type LayoutType = 'standard' | 'compact' | 'ats-optimized';
 export type PaperSize = 'a4' | 'letter';
 
 export interface ExportOptions {
@@ -13,21 +13,28 @@ export interface ExportOptions {
   entrySpacing: number; // in mm (spacing between items in a list, e.g., bullets)
 }
 
-// Default export options
+// Default export options - ATS Optimized based on technical audit
 export const defaultExportOptions: ExportOptions = {
-  layoutType: 'standard',
+  layoutType: 'ats-optimized',
   paperSize: 'a4',
   fontFamily: 'Calibri',
-  nameSize: 26,
-  sectionHeaderSize: 11,
-  subHeaderSize: 10.5,
-  bodyTextSize: 10,
-  sectionSpacing: 3, // mm
-  entrySpacing: 2, // mm
+  nameSize: 22,
+  sectionHeaderSize: 13,
+  subHeaderSize: 11,
+  bodyTextSize: 11,
+  sectionSpacing: 4,
+  entrySpacing: 2.5,
 };
 
 // Layout configurations
 export const layoutConfigs = {
+  'ats-optimized': {
+    name: 'ATS Optimized',
+    description: 'Maximum ATS compatibility with audit-compliant formatting',
+    margins: { top: 17.78, bottom: 17.78, left: 17.78, right: 17.78 },
+    spacing: { section: 4, entry: 2.5 },
+    recommended: true
+  },
   standard: {
     name: 'Standard',
     description: 'Professional layout with optimal spacing',
