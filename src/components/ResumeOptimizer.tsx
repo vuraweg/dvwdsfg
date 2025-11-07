@@ -261,33 +261,105 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
     },
     [jobApplicationLink, jobIdFromContext, navigate]
   );
+const checkForMissingSections = useCallback((resumeData: ResumeData): string[] => {
+  const missing: string[] = [];
+  
+  // Helper function to check if content is placeholder/low quality
+  const isPlaceholderContent = (text: string): boolean => {
+    const placeholderPatterns = [
+      /placeholder/i,
+      /example/i,
+      /sample/i,
+      /\[.*\]/,  // [brackets]
+      /your .+ here/i,
+      /^(n\/a|na|none|nil)$/i,
+      /^-+$/,  // just dashes
+      /^\s*$/  // empty or whitespace
+    ];
+    return placeholderPatterns.some(pattern => pattern.test(text));
+  };
 
-  const checkForMissingSections = useCallback((resumeData: ResumeData): string[] => { // Memoize
-    const missing: string[] = [];
-    if (!resumeData.workExperience || resumeData.workExperience.length === 0 || resumeData.workExperience.every(exp => !exp.role?.trim())) {
-      missing.push('workExperience');
-    }
-    if (!resumeData.projects || resumeData.projects.length === 0 || resumeData.projects.every(proj => !proj.title?.trim())) {
-      missing.push('projects');
-    }
-    if (!resumeData.skills || resumeData.skills.length === 0 || resumeData.skills.every(skillCat => !skillCat.list || skillCat.list.every(s => !s.trim()))) {
-      missing.push('skills');
-    }
-    if (!resumeData.education || resumeData.education.length === 0 || resumeData.education.every(edu => !edu.degree?.trim() || !edu.school?.trim() || !edu.year?.trim())) {
-      missing.push('education');
-    }
-    // Check for certifications
-    if (!resumeData.certifications || resumeData.certifications.length === 0 || resumeData.certifications.every(cert => (typeof cert === 'string' ? !cert.trim() : !cert.title?.trim()))) {
-      missing.push('certifications');
-    }
-    // Contact details (basic sanity): require at least phone and email
-    const phoneOk = typeof resumeData.phone === 'string' && resumeData.phone.trim().length > 0;
-    const emailOk = typeof resumeData.email === 'string' && resumeData.email.trim().length > 0;
-    if (!phoneOk || !emailOk) {
-      missing.push('contactDetails');
-    }
-    return missing;
-  }, []);
+  // Check work experience - must have at least 1 valid entry
+  if (!resumeData.workExperience || 
+      resumeData.workExperience.length === 0 || 
+      resumeData.workExperience.every(exp => 
+        !exp.role?.trim() || 
+        !exp.company?.trim() || 
+        isPlaceholderContent(exp.role) || 
+        isPlaceholderContent(exp.company) ||
+        !exp.bullets || 
+        exp.bullets.length === 0 ||
+        exp.bullets.every(b => !b.trim() || isPlaceholderContent(b))
+      )) {
+    missing.push('workExperience');
+  }
+
+  // Check projects - must have at least 1 valid entry with bullets
+  if (!resumeData.projects || 
+      resumeData.projects.length === 0 || 
+      resumeData.projects.every(proj => 
+        !proj.title?.trim() || 
+        isPlaceholderContent(proj.title) ||
+        !proj.bullets || 
+        proj.bullets.length === 0 ||
+        proj.bullets.every(b => !b.trim() || isPlaceholderContent(b))
+      )) {
+    missing.push('projects');
+  }
+
+  // Check skills - must have at least 1 category with real skills
+  if (!resumeData.skills || 
+      resumeData.skills.length === 0 || 
+      resumeData.skills.every(skillCat => 
+        !skillCat.category?.trim() || 
+        !skillCat.list || 
+        skillCat.list.length === 0 ||
+        skillCat.list.every(s => !s.trim() || isPlaceholderContent(s))
+      )) {
+    missing.push('skills');
+  }
+
+  // Check education - must have at least 1 complete entry
+  if (!resumeData.education || 
+      resumeData.education.length === 0 || 
+      resumeData.education.every(edu => 
+        !edu.degree?.trim() || 
+        !edu.school?.trim() || 
+        !edu.year?.trim() ||
+        isPlaceholderContent(edu.degree) ||
+        isPlaceholderContent(edu.school)
+      )) {
+    missing.push('education');
+  }
+
+  // Check certifications - must have at least 1 real certification
+  if (!resumeData.certifications || 
+      resumeData.certifications.length === 0 || 
+      resumeData.certifications.every(cert => {
+        const certText = typeof cert === 'string' ? cert : cert.title;
+        return !certText?.trim() || isPlaceholderContent(certText);
+      })) {
+    missing.push('certifications');
+  }
+
+  // Contact details - require phone AND email with valid formats
+  const phoneOk = typeof resumeData.phone === 'string' && 
+                  resumeData.phone.trim().length > 0 && 
+                  !isPlaceholderContent(resumeData.phone) &&
+                  resumeData.phone.length >= 10; // Basic length check
+  
+  const emailOk = typeof resumeData.email === 'string' && 
+                  resumeData.email.trim().length > 0 && 
+                  !isPlaceholderContent(resumeData.email) &&
+                  resumeData.email.includes('@') && 
+                  resumeData.email.includes('.');
+  
+  if (!phoneOk || !emailOk) {
+    missing.push('contactDetails');
+  }
+
+  return missing;
+}, []);
 
   const proceedWithFinalOptimization = useCallback(async (resumeData: ResumeData, initialScore: DetailedScore, accessToken: string) => { // Memoize
     try {
