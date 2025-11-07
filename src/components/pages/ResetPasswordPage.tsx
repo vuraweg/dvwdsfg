@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Sparkles, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { ResetPasswordForm } from '../auth/ResetPasswordForm';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const [isValidating, setIsValidating] = useState(true);
@@ -15,22 +16,42 @@ export const ResetPasswordPage: React.FC = () => {
   const logoImage = 'https://res.cloudinary.com/dlkovvlud/image/upload/w_1000,c_fill,ar_1:1,g_auto,r_max,bo_5px_solid_red,b_rgb:262c35/v1751536902/a-modern-logo-design-featuring-primoboos_XhhkS8E_Q5iOwxbAXB4CqQ_HnpCsJn4S1yrhb826jmMDw_nmycqj.jpg';
 
   useEffect(() => {
+    console.log('ResetPasswordPage: Full URL:', window.location.href);
+    console.log('ResetPasswordPage: Pathname:', location.pathname);
+    console.log('ResetPasswordPage: Search:', location.search);
+    console.log('ResetPasswordPage: Hash:', location.hash);
+
     const hash = window.location.hash;
     const type = searchParams.get('type');
+    const token = searchParams.get('token');
     const accessToken = searchParams.get('access_token');
-    const hashAccessToken = hash.includes('access_token');
-    const hashType = hash.includes('type=recovery');
+    
+    // Check hash for tokens (Supabase sometimes uses hash fragments)
+    const hashParams = new URLSearchParams(hash.substring(1));
+    const hashType = hashParams.get('type') || hash.includes('type=recovery');
+    const hashAccessToken = hashParams.get('access_token') || hash.includes('access_token');
+    const hashToken = hashParams.get('token');
 
-    const isRecoveryLink = (type === 'recovery' || hashType) && (accessToken || hashAccessToken);
+    console.log('ResetPasswordPage: Query params - type:', type, 'token:', token, 'access_token:', accessToken);
+    console.log('ResetPasswordPage: Hash params - type:', hashType, 'token:', hashToken, 'access_token:', hashAccessToken);
+
+    // Check if this is a valid recovery link
+    const isRecoveryLink = 
+      (type === 'recovery' || hashType) && 
+      (token || accessToken || hashToken || hashAccessToken);
+
+    console.log('ResetPasswordPage: Is recovery link?', isRecoveryLink);
 
     if (!isRecoveryLink) {
+      console.log('ResetPasswordPage: Invalid recovery link detected');
       setValidationError('Invalid or expired password reset link. Please request a new one.');
       setIsValidating(false);
       return;
     }
 
+    console.log('ResetPasswordPage: Valid recovery link detected');
     setIsValidating(false);
-  }, [searchParams]);
+  }, [searchParams, location]);
 
   const handleResetSuccess = () => {
     setResetSuccess(true);
