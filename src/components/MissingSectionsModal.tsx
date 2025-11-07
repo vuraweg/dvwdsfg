@@ -15,10 +15,9 @@ import {
   Github,
   ArrowLeft,
   ArrowRight,
-  Target, // Added for skills icon
-  GraduationCap // Added for education icon
+  Target,
+  GraduationCap
 } from 'lucide-react';
-
 
 interface WorkExperience {
   role: string;
@@ -32,13 +31,12 @@ interface Project {
   bullets: string[];
 }
 
-interface Skill { // New interface for Skill structure
+interface Skill {
   category: string;
   count: number;
   list: string[];
 }
 
-// ADDED: Education interface
 interface Education {
   degree: string;
   school: string;
@@ -47,7 +45,6 @@ interface Education {
   location?: string;
 }
 
-// New interface for ContactDetails
 interface ContactDetails {
   phone: string;
   email: string;
@@ -58,8 +55,8 @@ interface ContactDetails {
 interface MissingSectionsData {
   workExperience?: WorkExperience[];
   projects?: Project[];
-  skills?: Skill[]; // Added skills to MissingSectionsData
-  education?: Education[]; // ADDED: Education to MissingSectionsData
+  skills?: Skill[];
+  education?: Education[];
   certifications?: string[];
   contactDetails?: ContactDetails;
 }
@@ -83,10 +80,10 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
   const [projects, setProjects] = useState<Project[]>([
     { title: '', bullets: [''] }
   ]);
-  const [skills, setSkills] = useState<Skill[]>([ // New state for skills
+  const [skills, setSkills] = useState<Skill[]>([
     { category: '', count: 0, list: [] }
   ]);
-  const [education, setEducation] = useState<Education[]>([ // ADDED: Education state
+  const [education, setEducation] = useState<Education[]>([
     { degree: '', school: '', year: '', cgpa: '', location: '' }
   ]);
   const [certifications, setCertifications] = useState<string[]>(['']);
@@ -178,7 +175,6 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
     }
   };
 
-  // Skills functions
   const addSkillCategory = () => {
     setSkills([...skills, { category: '', count: 0, list: [] }]);
   };
@@ -215,7 +211,6 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
     setSkills(updated);
   };
 
-  // ADDED: Education functions
   const addEducation = () => {
     setEducation([...education, { degree: '', school: '', year: '', cgpa: '', location: '' }]);
   };
@@ -248,67 +243,74 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
     setCertifications(updated);
   };
 
-  // Handler for updating contact details
   const updateContactDetails = (field: keyof ContactDetails, value: string) => {
     setContactDetails(prev => ({ ...prev, [field]: value }));
   };
 
   const validateCurrentSection = () => {
-  const currentSection = missingSections[currentStep];
+    const currentSection = missingSections[currentStep];
 
-  if (currentSection === 'workExperience') {
-    // At least one experience with role, company, and year
-    return workExperience.some(we => 
-      we.role.trim().length >= 2 && 
-      we.company.trim().length >= 2 && 
-      we.year.trim().length >= 4
-    );
-  }
+    if (currentSection === 'workExperience') {
+      // At least one experience with role, company, and year
+      return workExperience.some(we => 
+        we.role.trim().length >= 2 && 
+        we.company.trim().length >= 2 && 
+        we.year.trim().length >= 4
+      );
+    }
 
-  if (currentSection === 'projects') {
-    // At least one project with title and one bullet
-    return projects.some(p => 
-      p.title.trim().length >= 3 && 
-      p.bullets.some(b => b.trim().length >= 10)
-    );
-  }
+    if (currentSection === 'projects') {
+      // At least one project with title and one bullet
+      return projects.some(p => 
+        p.title.trim().length >= 3 && 
+        p.bullets.some(b => b.trim().length >= 10)
+      );
+    }
 
-  if (currentSection === 'skills') {
-    // At least one skill category with category name and at least one skill
-    return skills.some(s => 
-      s.category.trim().length >= 2 && 
-      s.list.some(item => item.trim().length >= 2)
-    );
-  }
+    if (currentSection === 'skills') {
+      // At least one skill category with category name and at least one skill
+      return skills.some(s => 
+        s.category.trim().length >= 2 && 
+        s.list.some(item => item.trim().length >= 2)
+      );
+    }
 
-  if (currentSection === 'education') {
-    // At least one education with degree, school, and year
-    return education.some(edu => 
-      edu.degree.trim().length >= 2 && 
-      edu.school.trim().length >= 2 && 
-      edu.year.trim().length >= 4
-    );
-  }
+    if (currentSection === 'education') {
+      // At least one education with degree, school, and year
+      return education.some(edu => 
+        edu.degree.trim().length >= 2 && 
+        edu.school.trim().length >= 2 && 
+        edu.year.trim().length >= 4
+      );
+    }
 
-  if (currentSection === 'certifications') {
-    // At least one certification with at least 5 characters
-    return certifications.some(c => c.trim().length >= 5);
-  }
+    if (currentSection === 'certifications') {
+      // At least one certification with at least 5 characters
+      return certifications.some(c => c.trim().length >= 5);
+    }
 
-  if (currentSection === 'contactDetails') {
-    // Email must be valid format, phone optional but if provided must be valid
-    const emailValid = contactDetails.email.trim().includes('@') && 
-                      contactDetails.email.trim().includes('.');
-    const phoneValid = contactDetails.phone.trim() === '' || 
-                      contactDetails.phone.trim().length >= 10;
-    return emailValid && phoneValid;
-  }
+    if (currentSection === 'contactDetails') {
+      // Email must be valid format, phone optional but if provided must be valid
+      const emailValid = contactDetails.email.trim().includes('@') && 
+                        contactDetails.email.trim().includes('.');
+      const phoneValid = contactDetails.phone.trim() === '' || 
+                        contactDetails.phone.trim().length >= 10;
+      return emailValid && phoneValid;
+    }
 
-  return false;
-};
-
+    return false;
+  };
 
   const handleNext = () => {
+    if (currentStep < missingSections.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      handleSubmit();
+    }
+  };
+
+  const handleSkipCertifications = () => {
+    setCertifications([]);
     if (currentStep < missingSections.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -337,7 +339,7 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
       }));
     }
 
-    if (missingSections.includes('skills')) { // Include skills in submitted data
+    if (missingSections.includes('skills')) {
       data.skills = skills.filter(s =>
         s.category.trim() && s.list.some(item => item.trim())
       ).map(s => ({
@@ -345,25 +347,8 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
         list: s.list.filter(item => item.trim())
       }));
     }
-<div className="text-center">
-  <div className="bg-gradient-to-r from-orange-600 to-red-600 w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg">
-    <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-  </div>
-  <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2 px-4">
-    Complete Your Resume
-  </h1>
-  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 px-4">
-    We found some missing sections that are important for optimization
-  </p>
-  {/* ADD THIS: */}
-  <div className="mt-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 mx-4">
-    <p className="text-xs text-blue-800 dark:text-blue-300">
-      💡 <strong>Tip:</strong> Filling these sections will significantly improve your resume's ATS score and job match rate.
-    </p>
-  </div>
-</div>
 
-    if (missingSections.includes('education')) { // ADDED: Include education in submitted data
+    if (missingSections.includes('education')) {
       data.education = education.filter(edu =>
         edu.degree.trim() && edu.school.trim() && edu.year.trim()
       );
@@ -391,15 +376,15 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
 
   const renderWorkExperienceForm = () => (
     <div className="space-y-4 sm:space-y-6">
-   <div className="text-center mb-4 sm:mb-6 mt-0 sm:mt-0">
-
+      <div className="text-center mb-4 sm:mb-6 mt-0 sm:mt-0">
         <div className="bg-blue-100 w-10 h-10 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-4">
           <Briefcase className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
         </div>
         <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Add Work Experience</h3>
-        <p className="text-sm sm:text-base text-gray-600"> Please provide your work experience details. If you're a fresher and don't have any full-time experience,
-    we recommend adding any internships, training, or freelance work you've done. These greatly help in showcasing your skills.
-  </p>
+        <p className="text-sm sm:text-base text-gray-600">
+          Please provide your work experience details. If you're a fresher and don't have any full-time experience,
+          we recommend adding any internships, training, or freelance work you've done. These greatly help in showcasing your skills.
+        </p>
       </div>
 
       {workExperience.map((work, workIndex) => (
@@ -582,7 +567,6 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
     </div>
   );
 
-  // New render function for skills form
   const renderSkillsForm = () => (
     <div className="space-y-4 sm:space-y-6">
       <div className="text-center mb-6">
@@ -627,12 +611,12 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
             <div className="flex flex-col sm:flex-row gap-2 mb-2">
               <input
                 type="text"
-                value={''} // Controlled input for adding new skill
+                value={''}
                 onChange={(e) => { /* No direct state update here */ }}
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
                     addSkillToCategory(categoryIndex, e.currentTarget.value);
-                    e.currentTarget.value = ''; // Clear input after adding
+                    e.currentTarget.value = '';
                   }
                 }}
                 placeholder="e.g., JavaScript, React, Node.js"
@@ -640,7 +624,6 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
               />
               <button
                 onClick={() => {
-                  // Manually get value from input if not using onKeyPress
                   const inputElement = document.querySelector<HTMLInputElement>(`input[placeholder="e.g., JavaScript, React, Node.js"]`);
                   if (inputElement) {
                     addSkillToCategory(categoryIndex, inputElement.value);
@@ -683,7 +666,6 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
     </div>
   );
 
-  // ADDED: render function for education form
   const renderEducationForm = () => (
     <div className="space-y-4 sm:space-y-6">
       <div className="text-center mb-6">
@@ -784,7 +766,9 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
           <Award className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600" />
         </div>
         <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Add Certifications</h3>
-        <p className="text-sm sm:text-base text-gray-600">Please provide your certifications</p>
+        <p className="text-sm sm:text-base text-gray-600">
+          Add professional certifications that strengthen your resume. Skip if you don't have any.
+        </p>
       </div>
 
       {certifications.map((cert, index) => (
@@ -814,6 +798,12 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
         <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
         Add Another Certification
       </button>
+
+      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mt-4">
+        <p className="text-xs text-blue-800 dark:text-blue-300 text-center">
+          💡 No certifications? That's okay! You can skip this section and proceed.
+        </p>
+      </div>
     </div>
   );
 
@@ -881,13 +871,12 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
     </div>
   );
 
-
   const getSectionIcon = (section: string) => {
     switch (section) {
       case 'workExperience': return <Briefcase className="w-4 h-4" />;
       case 'projects': return <Code className="w-4 h-4" />;
-      case 'skills': return <Target className="w-4 h-4" />; // Icon for skills
-      case 'education': return <GraduationCap className="w-4 h-4" />; // ADDED: Icon for education
+      case 'skills': return <Target className="w-4 h-4" />;
+      case 'education': return <GraduationCap className="w-4 h-4" />;
       case 'certifications': return <Award className="w-4 h-4" />;
       case 'contactDetails': return <Mail className="w-4 h-4" />;
       default: return <AlertCircle className="w-4 h-4" />;
@@ -898,8 +887,8 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
     switch (section) {
       case 'workExperience': return 'Work Experience';
       case 'projects': return 'Projects';
-      case 'skills': return 'Skills'; // Name for skills
-      case 'education': return 'Education'; // ADDED: Name for education
+      case 'skills': return 'Skills';
+      case 'education': return 'Education';
       case 'certifications': return 'Certifications';
       case 'contactDetails': return 'Contact Details';
       default: return section;
@@ -907,16 +896,14 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
   };
 
   return (
-<div
-  className="fixed inset-0 z-50 bg-black/60 flex justify-center items-center p-2 sm:p-2 backdrop-blur-sm"
-  onClick={handleBackdropClick}
->
-<div
-    className="bg-white dark:bg-dark-100 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-[95vw] sm:max-w-4xl overflow-y-auto"
-    style={{ maxHeight: '80vh', overscrollBehavior: 'contain' }}
-  >
-
-
+    <div
+      className="fixed inset-0 z-50 bg-black/60 flex justify-center items-center p-2 sm:p-2 backdrop-blur-sm"
+      onClick={handleBackdropClick}
+    >
+      <div
+        className="bg-white dark:bg-dark-100 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-[95vw] sm:max-w-4xl overflow-y-auto"
+        style={{ maxHeight: '80vh', overscrollBehavior: 'contain' }}
+      >
         {/* Header */}
         <div className="relative bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 p-3 sm:p-6 sm:mb-6 border-b border-gray-200 dark:border-dark-300">
           <button
@@ -936,93 +923,101 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
             <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 px-4">
               We found some missing sections that are important for optimization
             </p>
+            <div className="mt-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 mx-4">
+              <p className="text-xs text-blue-800 dark:text-blue-300">
+                💡 <strong>Tip:</strong> Filling these sections will significantly improve your resume's ATS score and job match rate.
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Progress Bar */}
         <div className="p-3 sm:p-6 overflow-y-auto grow shrink basis-0 pb-[100px] dark:bg-dark-100">
-
-
-
-        <div className="flex justify-center sm:justify-between items-center flex-wrap gap-4 sm:gap-6 mb-2 sm:mb-6">
-
-
+          <div className="flex justify-center sm:justify-between items-center flex-wrap gap-4 sm:gap-6 mb-2 sm:mb-6">
             {missingSections.map((section, index) => (
-  <div key={section} className="flex items-center w-auto sm:w-auto">
-    <div
-      className={`w-10 h-10 rounded-full flex items-center justify-center ${
-        index < currentStep
-          ? 'bg-green-500 text-white dark:bg-green-600'
-          : index === currentStep
-          ? 'bg-blue-500 text-white dark:bg-blue-600'
-          : 'bg-gray-200 text-gray-500 dark:bg-dark-200 dark:text-gray-400'
-      }`}
-    >
-      {index < currentStep ? (
-        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-      ) : (
-        getSectionIcon(section)
-      )}
-    </div>
+              <div key={section} className="flex items-center w-auto sm:w-auto">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    index < currentStep
+                      ? 'bg-green-500 text-white dark:bg-green-600'
+                      : index === currentStep
+                      ? 'bg-blue-500 text-white dark:bg-blue-600'
+                      : 'bg-gray-200 text-gray-500 dark:bg-dark-200 dark:text-gray-400'
+                  }`}
+                >
+                  {index < currentStep ? (
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                  ) : (
+                    getSectionIcon(section)
+                  )}
+                </div>
 
-    {/* Only show text on desktop */}
-    <div className="ml-2 hidden sm:block">
-      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-        {getSectionName(section)}
-      </div>
-      <div className="text-xs text-gray-500 dark:text-gray-400">
-        {index < currentStep
-          ? 'Completed'
-          : index === currentStep
-          ? 'Current'
-          : 'Pending'}
-      </div>
-    </div>
+                <div className="ml-2 hidden sm:block">
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {getSectionName(section)}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {index < currentStep
+                      ? 'Completed'
+                      : index === currentStep
+                      ? 'Current'
+                      : 'Pending'}
+                  </div>
+                </div>
 
-    {/* Optional line between steps */}
-    {index < missingSections.length - 1 && (
-      <div className="w-6 h-px bg-gray-300 dark:bg-dark-300 mx-2 sm:w-16 sm:h-1 sm:mx-4"></div>
-    )}
-  </div>
-))}
-
+                {index < missingSections.length - 1 && (
+                  <div className="w-6 h-px bg-gray-300 dark:bg-dark-300 mx-2 sm:w-16 sm:h-1 sm:mx-4"></div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Content */}
-<div className="p-3 sm:p-6 overflow-y-auto flex-1 grow shrink basis-0">
+        <div className="p-3 sm:p-6 overflow-y-auto flex-1 grow shrink basis-0">
           {currentSection === 'workExperience' && renderWorkExperienceForm()}
           {currentSection === 'projects' && renderProjectsForm()}
-          {currentSection === 'skills' && renderSkillsForm()} {/* Render skills form */}
-          {currentSection === 'education' && renderEducationForm()} {/* ADDED: Render education form */}
+          {currentSection === 'skills' && renderSkillsForm()}
+          {currentSection === 'education' && renderEducationForm()}
           {currentSection === 'certifications' && renderCertificationsForm()}
           {currentSection === 'contactDetails' && renderContactDetailsForm()}
         </div>
 
         {/* Footer */}
-      <div className="bg-gray-50 dark:bg-dark-200 p-3 sm:p-6 border-t border-gray-200 dark:border-dark-300 flex flex-row justify-between items-center gap-3 flex-wrap p-25">
+        <div className="bg-gray-50 dark:bg-dark-200 p-3 sm:p-6 border-t border-gray-200 dark:border-dark-300 flex flex-col gap-2">
+          <div className="flex flex-row justify-between items-center gap-3">
+            <button
+              onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+              disabled={currentStep === 0}
+              className="flex-1 sm:w-auto px-4 py-3 border border-gray-300 dark:border-dark-300 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm min-h-[44px] flex justify-center items-center"
+            >
+              <ArrowLeft className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Previous</span>
+            </button>
 
-        <button
-  onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
-  disabled={currentStep === 0}
-  className="flex-1 sm:w-auto px-4 py-3 border border-gray-300 dark:border-dark-300 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm min-h-[44px] flex justify-center items-center"
->
-  <ArrowLeft className="w-4 h-4 sm:mr-2" />
-  <span className="hidden sm:inline">Previous</span>
-</button>
+            <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 order-first sm:order-none">
+              Step {currentStep + 1} of {missingSections.length}
+            </div>
 
-          <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 order-first sm:order-none ">
-            Step {currentStep + 1} of {missingSections.length}
+            <button
+              onClick={handleNext}
+              disabled={!isValid}
+              className="flex-1 sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors disabled:cursor-not-allowed text-sm min-h-[44px] flex justify-center items-center"
+            >
+              <span className="hidden sm:inline">{currentStep === missingSections.length - 1 ? 'Complete' : 'Next'}</span>
+              <ArrowRight className="w-4 h-4 sm:ml-2" />
+            </button>
           </div>
 
-          <button
-  onClick={handleNext}
-  disabled={!isValid}
-  className="flex-1 sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors disabled:cursor-not-allowed text-sm min-h-[44px] flex justify-center items-center"
->
-  <span className="hidden sm:inline">{currentStep === missingSections.length - 1 ? 'Complete' : 'Next'}</span>
-  <ArrowRight className="w-4 h-4 sm:ml-2" />
-</button>
+          {/* Skip button for certifications */}
+          {currentSection === 'certifications' && (
+            <button
+              onClick={handleSkipCertifications}
+              className="w-full text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 underline py-2"
+            >
+              I don't have any certifications (Skip this section)
+            </button>
+          )}
         </div>
       </div>
     </div>
