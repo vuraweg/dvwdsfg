@@ -19,7 +19,6 @@ export const blogService = {
         .from('blog_posts')
         .select('*', { count: 'exact' })
         .eq('status', 'published')
-        .lte('published_at', new Date().toISOString())
         .order('published_at', { ascending: false });
 
       if (filters?.search) {
@@ -100,7 +99,6 @@ export const blogService = {
         .select('*')
         .eq('slug', slug)
         .eq('status', 'published')
-        .lte('published_at', new Date().toISOString())
         .maybeSingle();
 
       if (error) throw error;
@@ -263,7 +261,6 @@ export const blogService = {
         .select('*')
         .in('id', relatedPostIds)
         .eq('status', 'published')
-        .lte('published_at', new Date().toISOString())
         .order('published_at', { ascending: false })
         .limit(limit);
 
@@ -324,8 +321,7 @@ export const blogService = {
       const { count: totalPosts } = await supabase
         .from('blog_posts')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'published')
-        .lte('published_at', new Date().toISOString());
+        .eq('status', 'published');
 
       const { count: totalCategories } = await supabase
         .from('blog_categories')
@@ -335,14 +331,12 @@ export const blogService = {
         .from('blog_posts')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'published')
-        .eq('is_featured', true)
-        .lte('published_at', new Date().toISOString());
+        .eq('is_featured', true);
 
       const { data: posts } = await supabase
         .from('blog_posts')
         .select('estimated_reading_time')
-        .eq('status', 'published')
-        .lte('published_at', new Date().toISOString());
+        .eq('status', 'published');
 
       const averageReadingTime = posts && posts.length > 0
         ? Math.round(posts.reduce((sum, p) => sum + (p.estimated_reading_time || 5), 0) / posts.length)
@@ -383,8 +377,7 @@ export const blogService = {
       let query = supabase
         .from('blog_posts')
         .select('*', { count: 'exact' })
-        .eq('status', 'published')
-        .lte('published_at', new Date().toISOString());
+        .eq('status', 'published');
 
       if (filters?.search) {
         query = query.or(`title.ilike.%${filters.search}%,body_content.ilike.%${filters.search}%`);
@@ -489,7 +482,7 @@ export const blogService = {
     }
   },
 
-    async trackUserInteraction(
+  async trackUserInteraction(
     userId: string,
     blogPostId: string,
     interactionType: 'viewed' | 'bookmarked' | 'completed',
@@ -509,7 +502,6 @@ export const blogService = {
         });
 
       if (error) {
-        // Silently fail if table doesn't exist
         if (error.code === 'PGRST116' || error.message?.includes('does not exist') || error.message?.includes('404')) {
           console.warn('blog_user_interactions table does not exist. Interaction tracking disabled.');
           return;
@@ -517,7 +509,6 @@ export const blogService = {
         throw error;
       }
     } catch (error: any) {
-      // Handle 404 errors gracefully
       if (error?.code === 'PGRST116' || error?.message?.includes('404') || error?.status === 404) {
         return;
       }
@@ -525,8 +516,7 @@ export const blogService = {
     }
   },
 
-
-    async getUserBookmarkedPosts(userId: string): Promise<BlogPostWithRelations[]> {
+  async getUserBookmarkedPosts(userId: string): Promise<BlogPostWithRelations[]> {
     try {
       const { data: interactions, error: interactionError } = await supabase
         .from('blog_user_interactions')
@@ -534,7 +524,6 @@ export const blogService = {
         .eq('user_id', userId)
         .eq('interaction_type', 'bookmarked');
 
-      // Handle table not existing
       if (interactionError) {
         if (interactionError.code === 'PGRST116' || interactionError.message?.includes('does not exist') || interactionError.message?.includes('404')) {
           console.warn('blog_user_interactions table does not exist. Returning empty bookmarks.');
@@ -552,7 +541,6 @@ export const blogService = {
         .select('*')
         .in('id', postIds)
         .eq('status', 'published')
-        .lte('published_at', new Date().toISOString())
         .order('published_at', { ascending: false });
 
       if (error) throw error;
@@ -575,10 +563,8 @@ export const blogService = {
     }
   },
 
-
   async isPostBookmarked(userId: string, blogPostId: string): Promise<boolean> {
     try {
-      // Check if table exists first
       const { data, error } = await supabase
         .from('blog_user_interactions')
         .select('id')
@@ -587,7 +573,6 @@ export const blogService = {
         .eq('interaction_type', 'bookmarked')
         .maybeSingle();
 
-      // If error is 404 or table doesn't exist, silently return false
       if (error) {
         if (error.code === 'PGRST116' || error.message?.includes('does not exist') || error.message?.includes('404')) {
           console.warn('blog_user_interactions table does not exist. Bookmark feature disabled.');
@@ -597,7 +582,6 @@ export const blogService = {
       }
       return !!data;
     } catch (error: any) {
-      // Handle 404 or table missing errors gracefully
       if (error?.code === 'PGRST116' || error?.message?.includes('404') || error?.status === 404) {
         return false;
       }
@@ -606,8 +590,7 @@ export const blogService = {
     }
   },
 
-
-    async removeBookmark(userId: string, blogPostId: string): Promise<void> {
+  async removeBookmark(userId: string, blogPostId: string): Promise<void> {
     try {
       const { error } = await supabase
         .from('blog_user_interactions')
@@ -630,5 +613,4 @@ export const blogService = {
       console.error('Error removing bookmark:', error);
     }
   }
-
 };
