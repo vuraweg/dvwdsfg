@@ -345,6 +345,23 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
         list: s.list.filter(item => item.trim())
       }));
     }
+<div className="text-center">
+  <div className="bg-gradient-to-r from-orange-600 to-red-600 w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg">
+    <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+  </div>
+  <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2 px-4">
+    Complete Your Resume
+  </h1>
+  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 px-4">
+    We found some missing sections that are important for optimization
+  </p>
+  {/* ADD THIS: */}
+  <div className="mt-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 mx-4">
+    <p className="text-xs text-blue-800 dark:text-blue-300">
+      💡 <strong>Tip:</strong> Filling these sections will significantly improve your resume's ATS score and job match rate.
+    </p>
+  </div>
+</div>
 
     if (missingSections.includes('education')) { // ADDED: Include education in submitted data
       data.education = education.filter(edu =>
