@@ -254,34 +254,59 @@ export const MissingSectionsModal: React.FC<MissingSectionsModalProps> = ({
   };
 
   const validateCurrentSection = () => {
-    const currentSection = missingSections[currentStep];
+  const currentSection = missingSections[currentStep];
 
-    if (currentSection === 'workExperience') {
-      return workExperience.some(we => we.role.trim() && we.company.trim() && we.year.trim());
-    }
+  if (currentSection === 'workExperience') {
+    // At least one experience with role, company, and year
+    return workExperience.some(we => 
+      we.role.trim().length >= 2 && 
+      we.company.trim().length >= 2 && 
+      we.year.trim().length >= 4
+    );
+  }
 
-    if (currentSection === 'projects') {
-      return projects.some(p => p.title.trim() && p.bullets.some(b => b.trim()));
-    }
+  if (currentSection === 'projects') {
+    // At least one project with title and one bullet
+    return projects.some(p => 
+      p.title.trim().length >= 3 && 
+      p.bullets.some(b => b.trim().length >= 10)
+    );
+  }
 
-    if (currentSection === 'skills') { // Validation for skills
-      return skills.some(s => s.category.trim() && s.list.some(item => item.trim()));
-    }
+  if (currentSection === 'skills') {
+    // At least one skill category with category name and at least one skill
+    return skills.some(s => 
+      s.category.trim().length >= 2 && 
+      s.list.some(item => item.trim().length >= 2)
+    );
+  }
 
-    if (currentSection === 'education') { // ADDED: Validation for education
-      return education.some(edu => edu.degree.trim() && edu.school.trim() && edu.year.trim());
-    }
+  if (currentSection === 'education') {
+    // At least one education with degree, school, and year
+    return education.some(edu => 
+      edu.degree.trim().length >= 2 && 
+      edu.school.trim().length >= 2 && 
+      edu.year.trim().length >= 4
+    );
+  }
 
-    if (currentSection === 'certifications') {
-      return certifications.some(c => c.trim());
-    }
+  if (currentSection === 'certifications') {
+    // At least one certification with at least 5 characters
+    return certifications.some(c => c.trim().length >= 5);
+  }
 
-    if (currentSection === 'contactDetails') {
-      return contactDetails.email.trim() !== '';
-    }
+  if (currentSection === 'contactDetails') {
+    // Email must be valid format, phone optional but if provided must be valid
+    const emailValid = contactDetails.email.trim().includes('@') && 
+                      contactDetails.email.trim().includes('.');
+    const phoneValid = contactDetails.phone.trim() === '' || 
+                      contactDetails.phone.trim().length >= 10;
+    return emailValid && phoneValid;
+  }
 
-    return false;
-  };
+  return false;
+};
+
 
   const handleNext = () => {
     if (currentStep < missingSections.length - 1) {
