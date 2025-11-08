@@ -590,36 +590,27 @@ Object.keys(dbUpdates).forEach((key) => {
     async getGlobalResumesCreatedCount(): Promise<number> {
     console.log('AuthService: Fetching global resumes created count...');
     try {
-      // First, get the count from your global settings/stats table
-      const { data: globalStats, error: statsError } = await supabase
-        .from('global_stats')
-        .select('total_resumes_created')
-        .single();
-
-      if (!statsError && globalStats?.total_resumes_created) {
-        console.log('AuthService: Global stats found:', globalStats.total_resumes_created);
-        return globalStats.total_resumes_created;
-      }
-
-      // Fallback: Count all resumes from resumes table
+      // Count all resumes ever created from the resumes table
       const { count, error } = await supabase
         .from('resumes')
         .select('*', { count: 'exact', head: true });
 
       if (error) {
         console.error('AuthService: Error fetching resumes count:', error);
-        return 50000; // Default fallback
+        return 50485; // Your current marketing number as fallback
       }
 
-      const totalCount = count || 0;
-      console.log('AuthService: Total resumes in database:', totalCount);
-      
-      // Add a buffer to show growth (optional)
-      return totalCount;
+      if (!count || count === 0) {
+        console.log('AuthService: No resumes found in database, returning default.');
+        return 50485; // Your current marketing number
+      }
+
+      console.log('AuthService: Total resumes in database:', count);
+      return count;
       
     } catch (error) {
       console.error('AuthService: Error in getGlobalResumesCreatedCount:', error);
-      return 50000; // Default fallback
+      return 50485; // Your current marketing number as fallback
     }
   }
 
