@@ -587,35 +587,42 @@ Object.keys(dbUpdates).forEach((key) => {
     }
   }
 
-  async getGlobalResumesCreatedCount(): Promise<number> {
+    async getGlobalResumesCreatedCount(): Promise<number> {
     console.log('AuthService: Fetching global resumes created count...');
     try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('resumes_created_count')
-        .not('resumes_created_count', 'is', null);
+      // First, get the count from your global settings/stats table
+      const { data: globalStats, error: statsError } = await supabase
+        .from('global_stats')
+        .select('total_resumes_created')
+        .single();
+
+      if (!statsError && globalStats?.total_resumes_created) {
+        console.log('AuthService: Global stats found:', globalStats.total_resumes_created);
+        return globalStats.total_resumes_created;
+      }
+
+      // Fallback: Count all resumes from resumes table
+      const { count, error } = await supabase
+        .from('resumes')
+        .select('*', { count: 'exact', head: true });
 
       if (error) {
-        console.error('AuthService: Error fetching global resumes count:', error);
-        return 50000;
+        console.error('AuthService: Error fetching resumes count:', error);
+        return 50000; // Default fallback
       }
 
-      if (!data || data.length === 0) {
-        console.log('AuthService: No resume data found, returning default count.');
-        return 50000;
-      }
-
-      const totalCount = data.reduce((sum, profile) => {
-        return sum + (profile.resumes_created_count || 0);
-      }, 0);
-
-      console.log('AuthService: Total global resumes created:', totalCount);
+      const totalCount = count || 0;
+      console.log('AuthService: Total resumes in database:', totalCount);
+      
+      // Add a buffer to show growth (optional)
       return totalCount;
+      
     } catch (error) {
       console.error('AuthService: Error in getGlobalResumesCreatedCount:', error);
-      return 50000;
+      return 50000; // Default fallback
     }
   }
+
 }
 
 export const authService = new AuthService();
