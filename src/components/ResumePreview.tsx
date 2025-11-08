@@ -216,11 +216,12 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
   const sectionTitleStyle: React.CSSProperties = {
     fontSize: ptToPx(PDF_CONFIG.fonts.sectionTitle.size),
     fontWeight: 'bold',
-    marginTop: mmToPx(PDF_CONFIG.spacing.sectionSpacingBefore),
-    marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter),
+    marginTop: mmToPx(PDF_CONFIG.spacing.sectionSpacingBefore), // Adjusted
+    marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter), // Adjusted
     fontFamily: `${PDF_CONFIG.fontFamily}, "Segoe UI", Tahoma, Geneva, Verdana, sans-serif`,
     letterSpacing: '0.5pt',
-    textTransform: 'none',
+    textTransform: 'uppercase',
+    // Force resume section titles to remain black even in dark mode context
     color: '#000000',
   } as const;
 
@@ -382,7 +383,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
         if (!String(resumeData.careerObjective || '').trim()) return null;
         return (
           <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
-            <h2 style={sectionTitleStyle}>Career Objective</h2>
+            <h2 style={sectionTitleStyle}>CAREER OBJECTIVE</h2>
             <div style={sectionUnderlineStyle}></div>
             <p style={{ ...bodyTextStyle, marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing) }}>
               {resumeData.careerObjective || ''}
@@ -394,7 +395,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
         if (!String(resumeData.summary || '').trim()) return null;
         return (
           <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
-            <h2 style={sectionTitleStyle}>Professional Summary</h2>
+            <h2 style={sectionTitleStyle}>PROFESSIONAL SUMMARY</h2>
             <div style={sectionUnderlineStyle}></div>
             <p style={{ ...bodyTextStyle, marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing) }}>
               {resumeData.summary || ''}
@@ -407,7 +408,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
         return (
           <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
             <h2 style={sectionTitleStyle}>
-              {userType === 'fresher' || userType === 'student' ? 'Work Experience' : 'Professional Experience'}
+              {userType === 'fresher' || userType === 'student' ? 'WORK EXPERIENCE' : 'PROFESSIONAL EXPERIENCE'}
             </h2>
             <div style={sectionUnderlineStyle}></div>
             {resumeData.workExperience.map((job, index) => (
@@ -449,7 +450,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
         if (!resumeData.education || resumeData.education.length === 0) return null;
         return (
           <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
-            <h2 style={sectionTitleStyle}>Education</h2>
+            <h2 style={sectionTitleStyle}>EDUCATION</h2>
             <div style={sectionUnderlineStyle}></div>
             {resumeData.education.map((edu, index) => (
               <div key={index} style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing * 2) }}>
@@ -481,7 +482,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
         return (
           <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
             <h2 style={sectionTitleStyle}>
-              Projects
+              PROJECTS
             </h2>
             <div style={sectionUnderlineStyle}></div>
             {resumeData.projects.map((project, index) => (
@@ -516,7 +517,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
         if (!resumeData.skills || resumeData.skills.length === 0) return null;
         return (
           <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
-            <h2 style={sectionTitleStyle}>Skills</h2>
+            <h2 style={sectionTitleStyle}>SKILLS</h2>
             <div style={sectionUnderlineStyle}></div>
             {resumeData.skills.map((skillCategory, index) => (
               <div key={index} style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing * 0.5) }}>
@@ -530,17 +531,13 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
         );
 
       case 'certifications':
+        if (!resumeData.certifications || resumeData.certifications.length === 0) return null;
         return (
           <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
-            <h2 style={sectionTitleStyle}>Certifications</h2>
+            <h2 style={sectionTitleStyle}>CERTIFICATIONS</h2>
             <div style={sectionUnderlineStyle}></div>
-            {!resumeData.certifications || resumeData.certifications.length === 0 ? (
-              <p style={{ ...bodyTextStyle, marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent) }}>
-                Available upon request
-              </p>
-            ) : (
-              <ul style={{ marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent), listStyleType: 'disc' }}>
-                {resumeData.certifications.map((cert, index) => {
+            <ul style={{ marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent), listStyleType: 'disc' }}> {/* Changed to disc */}
+              {resumeData.certifications.map((cert, index) => {
                 if (!cert) {
                   return null;
                 }
@@ -573,8 +570,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
                   );
                 }
               })}
-              </ul>
-            )}
+            </ul>
           </div>
         );
 
@@ -585,7 +581,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
 
         return (
           <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
-            <h2 style={sectionTitleStyle}>Achievements</h2>
+            <h2 style={sectionTitleStyle}>ACHIEVEMENTS</h2>
             <div style={sectionUnderlineStyle}></div>
             {hasAchievements && (
               <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing) }}>
@@ -615,7 +611,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
           <>
             {resumeData.additionalSections.map((section, sectionIndex) => (
               <div key={sectionIndex} style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
-                <h2 style={sectionTitleStyle}>{section.title}</h2>
+                <h2 style={sectionTitleStyle}>{section.title.toUpperCase()}</h2>
                 <div style={sectionUnderlineStyle}></div>
               {section.bullets && section.bullets.length > 0 && (
   <ul style={{ marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent), listStyleType: 'disc' }}>
@@ -749,7 +745,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
             width: '100%',
             boxSizing: 'border-box',
           }}>
-            {(Array.isArray(sectionOrder) ? sectionOrder : []).map((sectionName) => (   <React.Fragment key={sectionName}>     {renderSection(sectionName)}   </React.Fragment> ))}
+            {(Array.isArray(sectionOrder) ? sectionOrder : []).map((sectionName) => renderSection(sectionName))}
           </div>
         </div>
       </div>
