@@ -529,54 +529,49 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
           </div>
         );
 
-      case 'certifications':
-        return (
-          <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
-            <h2 style={sectionTitleStyle}>Certifications</h2>
-            <div style={sectionUnderlineStyle}></div>
-            {!resumeData.certifications || resumeData.certifications.length === 0 ? (
-              <p style={{ ...bodyTextStyle, marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent) }}>
-                Available upon request
-              </p>
-            ) : (
-              <ul style={{ marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent), listStyleType: 'disc' }}>
-                {resumeData.certifications.map((cert, index) => {
-                if (!cert) {
-                  return null;
-                }
+     case 'certifications':
+  // ✅ Show this section only if certifications exist
+  if (resumeData.certifications && resumeData.certifications.length > 0) {
+    return (
+      <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
+        <h2 style={sectionTitleStyle}>Certifications</h2>
+        <div style={sectionUnderlineStyle}></div>
+        <ul style={{ marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent), listStyleType: 'disc' }}>
+          {resumeData.certifications.map((cert, index) => {
+            if (!cert) return null;
 
-                // Properly handle both string and object certification types
-                if (typeof cert === 'string') {
-                  return (
-                    <li key={index} style={listItemStyle}>
-                      <span>{cert}</span>
-                    </li>
-                  );
-                } else if (cert && typeof cert === 'object' && 'title' in cert) {
-                  // Handle Certification object with title and description
-                  const certObj = cert as { title: string; description?: string };
-                  return (
-                    <li key={index} style={listItemStyle}>
-                      <span>
-                        <b style={{fontWeight: 'bold'}}>{certObj.title}</b>
-                        {certObj.description ? `: ${certObj.description}` : ''}
-                      </span>
-                    </li>
-                  );
-                } else {
-                  // Fallback for unexpected formats
-                  console.warn('Unexpected certification format:', cert);
-                  return (
-                    <li key={index} style={listItemStyle}>
-                      <span>{String(cert)}</span>
-                    </li>
-                  );
-                }
-              })}
-              </ul>
-            )}
-          </div>
-        );
+            // Handle string and object formats gracefully
+            if (typeof cert === 'string') {
+              return (
+                <li key={index} style={listItemStyle}>
+                  <span>{cert}</span>
+                </li>
+              );
+            } else if (typeof cert === 'object' && 'title' in cert) {
+              const certObj = cert as { title: string; description?: string };
+              return (
+                <li key={index} style={listItemStyle}>
+                  <span>
+                    <b style={{ fontWeight: 'bold' }}>{certObj.title}</b>
+                    {certObj.description ? `: ${certObj.description}` : ''}
+                  </span>
+                </li>
+              );
+            } else {
+              return (
+                <li key={index} style={listItemStyle}>
+                  <span>{String(cert)}</span>
+                </li>
+              );
+            }
+          })}
+        </ul>
+      </div>
+    );
+  }
+
+  // ❌ If no certifications, hide section completely
+  
 
       case 'achievementsAndExtras':
         const hasAchievements = resumeData.achievements && resumeData.achievements.length > 0;
