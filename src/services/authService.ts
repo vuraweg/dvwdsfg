@@ -71,7 +71,6 @@ class AuthService {
     const isAdmin = data.user.email === 'primoboostai@gmail.com';
 const profileRole = data.user.user_metadata?.role || (isAdmin ? 'admin' : 'client');
 
-
     const userResult: User = {
       id: data.user.id,
       name: data.user.email?.split('@')[0] || 'User',
@@ -99,14 +98,16 @@ const profileRole = data.user.user_metadata?.role || (isAdmin ? 'admin' : 'clien
     if (!passwordValidation.isValid) throw new Error(passwordValidation.message!);
     if (credentials.password !== credentials.confirmPassword) throw new Error('Passwords do not match');
 
+    console.log('AuthService: Calling supabase.auth.signUp() for email:', credentials.email);
+
     const { data, error } = await supabase.auth.signUp({
       email: credentials.email,
       password: credentials.password,
       options: {
         data: {
-          name: credentials.name.trim(),
-          referralCode: credentials.referralCode || null
-        }
+          full_name: credentials.name,
+        },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       }
     });
 
@@ -116,22 +117,49 @@ const profileRole = data.user.user_metadata?.role || (isAdmin ? 'admin' : 'clien
     }
     if (!data.user) {
       console.error('AuthService: signUp returned no user data.');
-      throw new Error('Failed to create account. Please try again.');
+      throw new Error('Signup failed. Please try again.');
     }
     console.log('AuthService: User signed up with Supabase. User ID:', data.user.id);
 
-    // Register device for new user
-    
+    // Create user profile in user_profiles table
+    console.log('AuthService: Creating user profile in user_profiles table...');
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({
+        id: data.user.id,
+        full_name: credentials.name,
+        email_address: credentials.email,
+        role: 'client',
+        has_seen_profile_prompt: false,
+        resumes_created_count: 0
+      });
 
-    const signupResult = {
-      needsVerification: !data.session,
+    if (profileError) {
+      console.error('AuthService: Error creating user profile in user_profiles:', profileError);
+      // Don't throw - user account is created, profile creation can be retried
+    } else {
+      console.log('AuthService: User profile created successfully in user_profiles.');
+    }
+
+    // Handle referral if present
+    if (credentials.referralCode && credentials.referralCode.trim() !== '') {
+      try {
+        console.log('AuthService: Processing referral code:', credentials.referralCode);
+        await paymentService.processReferral(data.user.id, credentials.referralCode);
+        console.log('AuthService: Referral processed successfully.');
+      } catch (referralError) {
+        console.warn('AuthService: Failed to process referral:', referralError);
+        // Don't throw - signup is successful even if referral fails
+      }
+    }
+
+    console.log('AuthService: Signup process completed.');
+    return {
+      needsVerification: true,
       email: credentials.email
     };
-    console.log('AuthService: Signup process completed. Needs verification:', signupResult.needsVerification);
-    return signupResult;
   }
 
-  // New public method to fetch user profile
   public async fetchUserProfile(userId: string): Promise<{
     full_name: string,
     email_address: string,
@@ -147,14 +175,16 @@ const profileRole = data.user.user_metadata?.role || (isAdmin ? 'admin' : 'clien
     current_location?: string,
     education_details?: any,
     experience_details?: any,
-    skills_details?: any
+    skills_details?: any,
+    certifications_details?: any,
+    projects_details?: any
   } | null> {
     console.log('AuthService: Fetching user profile for user ID:', userId);
     try {
       const { data, error }
         = await supabase
         .from('user_profiles')
-        .select('full_name, email_address, phone, linkedin_profile, wellfound_profile, username, referral_code, has_seen_profile_prompt, resumes_created_count, role, resume_headline, current_location, education_details, experience_details, skills_details')
+        .select('full_name, email_address, phone, linkedin_profile, wellfound_profile, username, referral_code, has_seen_profile_prompt, resumes_created_count, role, resume_headline, current_location, education_details, experience_details, skills_details, certifications_details, projects_details')
         .eq('id', userId)
         .maybeSingle();
       if (error) {
@@ -232,7 +262,6 @@ const profileRole = data.user.user_metadata?.role || (isAdmin ? 'admin' : 'clien
       const isAdmin = session.user.email === 'primoboostai@gmail.com';
 const profileRole = profile?.role || (isAdmin ? 'admin' : 'client');
 
-
       const userResult: User = {
         id: session.user.id,
         name: profile?.full_name || session.user.email?.split('@')[0] || 'User',
@@ -248,7 +277,13 @@ const profileRole = profile?.role || (isAdmin ? 'admin' : 'client');
         hasSeenProfilePrompt: profile?.has_seen_profile_prompt || false,
         resumesCreatedCount: profile?.resumes_created_count || 0,
         role: profileRole as 'admin' | 'client',
-
+        resumeHeadline: profile?.resume_headline || undefined,
+        currentLocation: profile?.current_location || undefined,
+        educationDetails: profile?.education_details || undefined,
+        experienceDetails: profile?.experience_details || undefined,
+        skillsDetails: profile?.skills_details || undefined,
+        certificationsDetails: profile?.certifications_details || undefined,
+        projectsDetails: profile?.projects_details || undefined
       };
       console.log('AuthService: getCurrentUser completed. Returning user data.');
       return userResult;
@@ -297,29 +332,145 @@ const profileRole = profile?.role || (isAdmin ? 'admin' : 'client');
     console.log('AuthService: Logout process finished.');
   }
 
-  async forgotPassword(email: string): Promise<void> { // Changed parameter name and type
-  console.log('AuthService: Starting forgotPassword for email:', email); // Use 'email' directly
-  // MODIFIED: Call isValidEmail instead of isValidGmail
-  if (!this.isValidEmail(email)) throw new Error('Please enter a valid email address.');
- const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+async forgotPassword(email: string): Promise<void> {
+  console.log('AuthService: Starting forgotPassword for email:', email);
+
+  if (!this.isValidEmail(email)) {
+    throw new Error('Please enter a valid email address.');
+  }
+
+  // Check rate limit before sending reset email
+  try {
+    const { data: rateLimitCheck, error: rateLimitError } = await supabase.rpc(
+      'check_password_reset_rate_limit',
+      { p_email: email }
+    );
+
+    if (rateLimitError) {
+      console.error('AuthService: Rate limit check error:', rateLimitError);
+      // Continue even if rate limit check fails
+    } else if (rateLimitCheck && !rateLimitCheck.allowed) {
+      const minutes = Math.ceil(rateLimitCheck.retry_after_seconds / 60);
+      throw new Error(
+        `Too many password reset attempts. Please try again in ${minutes} minute${minutes > 1 ? 's' : ''}.`
+      );
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+  }
+
+  // Get the current origin for redirect URL
+ const redirectUrl = `${window.location.origin}/reset-password`;
+
+  console.log('AuthService: Password reset redirect URL:', redirectUrl);
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: redirectUrl,
+  });
+
+  // Log the attempt
+  try {
+    await supabase.rpc('log_password_reset_attempt', {
+      p_email: email,
+      p_ip_address: null, // Could be captured from client if needed
+      p_user_agent: navigator.userAgent,
+      p_success: error === null
+    });
+  } catch (logError) {
+    console.warn('AuthService: Failed to log password reset attempt:', logError);
+  }
+
   if (error) {
     console.error('AuthService: resetPasswordForEmail error:', error);
     throw new Error(error.message);
   }
-  console.log('AuthService: Forgot password email sent.');
+
+  console.log('AuthService: Password reset email sent successfully.');
 }
 
+  async resetPassword(data: ForgotPasswordData): Promise<void> {
+    console.log('AuthService: Starting resetPassword...');
+    
+    // Validate access token from URL first
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+      console.error('AuthService: No valid session found for password reset:', sessionError);
+      throw new Error('Invalid or expired reset link. Please request a new password reset.');
+    }
 
-  async resetPassword(newPassword: string): Promise<void> {
-    console.log('AuthService: Starting resetPassword.');
-    const passwordValidation = this.validatePasswordStrength(newPassword);
+    const passwordValidation = this.validatePasswordStrength(data.newPassword);
     if (!passwordValidation.isValid) throw new Error(passwordValidation.message!);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (data.newPassword !== data.confirmPassword) throw new Error('Passwords do not match');
+
+    const { error } = await supabase.auth.updateUser({ password: data.newPassword });
+
     if (error) {
-      console.error('AuthService: updateUser password error:', error);
+      console.error('AuthService: updateUser error during password reset:', error);
       throw new Error(error.message);
     }
-    console.log('AuthService: Password reset successfully.');
+
+    console.log('AuthService: Password reset successful.');
+  }
+
+  async verifyEmail(token: string): Promise<void> {
+    console.log('AuthService: Verifying email with token');
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash: token,
+      type: 'email'
+    });
+    if (error) {
+      console.error('AuthService: Email verification error:', error);
+      throw new Error(error.message);
+    }
+    console.log('AuthService: Email verified successfully');
+  }
+
+  async refreshUserProfile(userId: string): Promise<User | null> {
+    console.log('AuthService: Refreshing user profile for user ID:', userId);
+    const profile = await this.fetchUserProfile(userId);
+    if (!profile) {
+      console.warn('AuthService: Could not fetch profile for refreshUserProfile.');
+      return null;
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      console.warn('AuthService: No session found during refreshUserProfile.');
+      return null;
+    }
+
+    const isAdmin = session.user.email === 'primoboostai@gmail.com';
+const profileRole = profile?.role || (isAdmin ? 'admin' : 'client');
+
+    const userResult: User = {
+      id: session.user.id,
+      name: profile.full_name || session.user.email?.split('@')[0] || 'User',
+      email: profile.email_address || session.user.email!,
+      phone: profile.phone || undefined,
+      linkedin: profile.linkedin_profile || undefined,
+      github: profile.wellfound_profile || undefined,
+      referralCode: profile.referral_code || undefined,
+      username: profile.username || undefined,
+      isVerified: session.user.email_confirmed_at !== null,
+      createdAt: session.user.created_at || new Date().toISOString(),
+      lastLogin: new Date().toISOString(),
+      hasSeenProfilePrompt: profile.has_seen_profile_prompt || false,
+      resumesCreatedCount: profile.resumes_created_count || 0,
+      role: profileRole as 'admin' | 'client',
+      resumeHeadline: profile.resume_headline || undefined,
+      currentLocation: profile.current_location || undefined,
+      educationDetails: profile.education_details || undefined,
+      experienceDetails: profile.experience_details || undefined,
+      skillsDetails: profile.skills_details || undefined,
+      certificationsDetails: profile.certifications_details || undefined,
+      projectsDetails: profile.projects_details || undefined
+    };
+
+    console.log('AuthService: refreshUserProfile completed.');
+    return userResult;
   }
 
   async updateUserProfile(userId: string, updates: {
@@ -351,6 +502,8 @@ const profileRole = profile?.role || (isAdmin ? 'admin' : 'client');
   education_details: updates.education_details,
   experience_details: updates.experience_details,
   skills_details: updates.skills_details,
+  projects_details: updates.projects_details,
+  certifications_details: updates.certifications_details,
   profile_updated_at: new Date().toISOString(),
 };
 
@@ -359,8 +512,6 @@ Object.keys(dbUpdates).forEach((key) => {
     delete dbUpdates[key];
   }
 });
-
-
 
       const { error } = await supabase
         .from('user_profiles')
@@ -395,135 +546,74 @@ Object.keys(dbUpdates).forEach((key) => {
     console.log('AuthService: Starting ensureValidSession...');
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
-      console.log('AuthService: getSession result - session:', session ? 'exists' : 'null', 'error:', error); // ADDED LOG
+      console.log('AuthService: getSession result - session:', session ? 'exists' : 'null', 'error:', error);
 
       if (error) {
         console.error('AuthService: Session check failed in ensureValidSession:', error);
-        console.log('AuthService: Returning false due to getSession error.'); // NEW LOG
+        console.log('AuthService: Returning false due to getSession error.');
         return false;
       }
 
-      if (!session) {
-        console.log('AuthService: No active session found in ensureValidSession.');
-        console.log('AuthService: Returning false because no session was found.'); // NEW LOG
+      if (!session?.user) {
+        console.log('AuthService: No session found in ensureValidSession.');
         return false;
       }
-      console.log('AuthService: Session found in ensureValidSession. User ID:', session.user.id);
 
+      console.log('AuthService: Session exists. Checking expiration...');
       const now = Math.floor(Date.now() / 1000);
       if (session.expires_at && session.expires_at < now + 300) {
-        console.log('AuthService: Session expiring soon in ensureValidSession, refreshing...');
+        console.log('AuthService: Session expiring soon, attempting refresh...');
         const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        console.log('AuthService: refreshSession result - session:', refreshData.session ? 'exists' : 'null', 'error:', refreshError); // ADDED LOG
         if (refreshError || !refreshData.session) {
           console.error('AuthService: Session refresh failed in ensureValidSession:', refreshError);
-          console.log('AuthService: Returning false due to refreshSession error or no refreshed session.'); // NEW LOG
+          console.log('AuthService: Returning false due to session refresh error.');
+          if (refreshError?.message === "Invalid Refresh Token: Refresh Token Not Found") {
+            console.warn('AuthService: Invalid refresh token detected. Forcing logout.');
+            await supabase.auth.signOut();
+          }
           return false;
         }
         console.log('AuthService: ✅ Session refreshed successfully in ensureValidSession.');
+      } else {
+        console.log('AuthService: Session is valid and not expiring soon.');
       }
-      console.log('AuthService: ensureValidSession completed. Session is valid.');
+
+      console.log('AuthService: ensureValidSession completed. Returning true.');
       return true;
     } catch (error) {
       console.error('AuthService: Error in ensureValidSession:', error);
-      console.log('AuthService: Returning false due to unexpected error in ensureValidSession.'); // NEW LOG
+      console.log('AuthService: Returning false due to catch block error.');
       return false;
     }
   }
 
-  async getUserDevices(userId: string) {
-    console.log('AuthService: Getting user devices for user ID:', userId);
-    return deviceTrackingService.getUserDevices(userId);
-  }
-
-  async getUserSessions(userId: string) {
-    console.log('AuthService: Getting user sessions for user ID:', userId);
-    return deviceTrackingService.getUserSessions(userId);
-  }
-
-  async getUserActivityLogs(userId: string, limit?: number) {
-    console.log('AuthService: Getting user activity logs for user ID:', userId);
-    return deviceTrackingService.getUserActivityLogs(userId, limit);
-  }
-
-  async trustDevice(deviceId: string) {
-    console.log('AuthService: Trusting device ID:', deviceId);
-    return deviceTrackingService.trustDevice(deviceId);
-  }
-
-  async removeDevice(deviceId: string) {
-    console.log('AuthService: Removing device ID:', deviceId);
-    return deviceTrackingService.removeDevice(deviceId);
-  }
-
-  async endSession(sessionId: string) {
-    console.log('AuthService: Ending session ID:', sessionId);
-    return deviceTrackingService.endSpecificSession(sessionId);
-  }
-
-  async endAllOtherSessions(userId: string, currentSessionToken: string) {
-    console.log('AuthService: Ending all other sessions for user ID:', userId);
-    return deviceTrackingService.endAllOtherSessions(userId, currentSessionToken);
-  }
-
-  // ADDED: New method to increment resumes_created_count
-  async incrementResumesCreatedCount(userId: string): Promise<void> {
-    console.log('AuthService: Incrementing resumes_created_count for user ID:', userId);
-    try {
-      const { error } = await supabase.rpc('increment_resumes_created_count', { 
-        user_id_param: userId 
-      });
-      if (error) {
-        console.error('AuthService: Error incrementing resumes_created_count:', error);
-        throw new Error('Failed to increment resume count.');
-      }
-      console.log('AuthService: resumes_created_count incremented successfully.');
-    } catch (error) {
-      console.error('AuthService: Error in incrementResumesCreatedCount catch block:', error);
-      throw error;
-    }
-  }
-
-  // ADDED: New method to increment global resumes created count
-  async incrementGlobalResumesCreatedCount(): Promise<number> {
-    console.log('AuthService: Incrementing global resumes created count...');
-    try {
-      const { data, error } = await supabase.rpc('increment_total_resumes_created');
-      if (error) {
-        console.error('AuthService: Error incrementing global resumes count:', error);
-        throw new Error('Failed to increment global resume count.');
-      }
-      console.log('AuthService: Global resumes count incremented successfully. New count:', data);
-      return data;
-    } catch (error) {
-      console.error('AuthService: Error in incrementGlobalResumesCreatedCount catch block:', error);
-      throw error;
-    }
-  }
-
-  // ADDED: New method to fetch global resumes created count
-  async getGlobalResumesCreatedCount(): Promise<number> {
+    async getGlobalResumesCreatedCount(): Promise<number> {
     console.log('AuthService: Fetching global resumes created count...');
     try {
-      const { data, error } = await supabase
-        .from('app_metrics')
-        .select('metric_value')
-        .eq('metric_name', 'total_resumes_created')
-        .single();
-      
+      // Count all resumes ever created from the resumes table
+      const { count, error } = await supabase
+        .from('resumes')
+        .select('*', { count: 'exact', head: true });
+
       if (error) {
-        console.error('AuthService: Error fetching global resumes count:', error);
-        return 50000; // Return default if fetch fails
+        console.error('AuthService: Error fetching resumes count:', error);
+        return 50485; // Your current marketing number as fallback
       }
+
+      if (!count || count === 0) {
+        console.log('AuthService: No resumes found in database, returning default.');
+        return 50485; // Your current marketing number
+      }
+
+      console.log('AuthService: Total resumes in database:', count);
+      return count;
       
-      console.log('AuthService: Global resumes count fetched successfully:', data.metric_value);
-      return data.metric_value;
     } catch (error) {
-      console.error('AuthService: Error in getGlobalResumesCreatedCount catch block:', error);
-      return 50000; // Return default if fetch fails
+      console.error('AuthService: Error in getGlobalResumesCreatedCount:', error);
+      return 50485; // Your current marketing number as fallback
     }
   }
+
 }
 
 export const authService = new AuthService();
-
