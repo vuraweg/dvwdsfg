@@ -13,9 +13,9 @@ export interface ExportOptions {
   entrySpacing: number; // in mm (spacing between items in a list, e.g., bullets)
 }
 
-// Default export options - ATS Optimized based on technical audit
+// Default export options - Standard
 export const defaultExportOptions: ExportOptions = {
-  layoutType: 'ats-optimized',
+  layoutType: 'standard',
   paperSize: 'a4',
   fontFamily: 'Calibri',
   nameSize: 22,
