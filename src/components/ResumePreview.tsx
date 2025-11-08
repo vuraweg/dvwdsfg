@@ -749,7 +749,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
             width: '100%',
             boxSizing: 'border-box',
           }}>
-            {(Array.isArray(sectionOrder) ? sectionOrder : []).map((sectionName) => renderSection(sectionName))}
+            {(Array.isArray(sectionOrder) ? sectionOrder : []).map((sectionName) => (   <React.Fragment key={sectionName}>     {renderSection(sectionName)}   </React.Fragment> ))}
           </div>
         </div>
       </div>
