@@ -438,41 +438,43 @@ const checkForMissingSections = useCallback((resumeData: ResumeData): string[] =
     }
   }, [jobDescription, proceedWithFinalOptimization]); // Dependencies for memoized function
 
-  const continueOptimizationProcess = useCallback(async (resumeData: ResumeData, accessToken: string) => { // Memoize
-    try {
-      await handleInitialResumeProcessing(resumeData, accessToken);
-    } catch (error) {
-      console.error('Error in optimization process:', error);
-      alert('Failed to continue optimization. Please try again.');
-      setIsOptimizing(false);
-    }
-    const missing = checkForMissingSections(baseResume);
-
-// DEBUG: Log missing sections detection
-console.log('🔍 Missing Sections Check:', {
-  totalMissing: missing.length,
-  missingSections: missing,
-  resumeData: {
-    hasWorkExperience: baseResume.workExperience?.length > 0,
-    hasProjects: baseResume.projects?.length > 0,
-    hasSkills: baseResume.skills?.length > 0,
-    hasEducation: baseResume.education?.length > 0,
-    hasCertifications: baseResume.certifications?.length > 0,
-    hasPhone: !!baseResume.phone,
-    hasEmail: !!baseResume.email
+ const continueOptimizationProcess = useCallback(async (resumeData: ResumeData, accessToken: string) => { // Memoize
+  try {
+    await handleInitialResumeProcessing(resumeData, accessToken);
+  } catch (error) {
+    console.error('Error in optimization process:', error);
+    alert('Failed to continue optimization. Please try again.');
+    setIsOptimizing(false);
   }
-});
 
-if (missing.length > 0) {
-  console.log('✅ Opening Missing Sections Modal');
-  setMissingSections(missing);
-  setPendingResumeData(baseResume);
-  setShowMissingSectionsModal(true);
-  setIsOptimizing(false);
-  return;
-}
+  // ✅ FIXED: changed all baseResume references to resumeData
+  const missing = checkForMissingSections(resumeData);
 
-  }, [handleInitialResumeProcessing]); // Dependencies for memoized function
+  // DEBUG: Log missing sections detection
+  console.log('🔍 Missing Sections Check:', {
+    totalMissing: missing.length,
+    missingSections: missing,
+    resumeData: {
+      hasWorkExperience: resumeData.workExperience?.length > 0,
+      hasProjects: resumeData.projects?.length > 0,
+      hasSkills: resumeData.skills?.length > 0,
+      hasEducation: resumeData.education?.length > 0,
+      hasCertifications: resumeData.certifications?.length > 0,
+      hasPhone: !!resumeData.phone,
+      hasEmail: !!resumeData.email
+    }
+  });
+
+  if (missing.length > 0) {
+    console.log('✅ Opening Missing Sections Modal');
+    setMissingSections(missing);
+    setPendingResumeData(resumeData);
+    setShowMissingSectionsModal(true);
+    setIsOptimizing(false);
+    return;
+  }
+}, [handleInitialResumeProcessing]); // Dependencies for memoized function
+
 
   const handleMissingSectionsProvided = useCallback(async (data: any) => {
     setIsProcessingMissingSections(true);
