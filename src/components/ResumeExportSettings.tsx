@@ -86,8 +86,9 @@ export const ResumeExportSettings: React.FC<ResumeExportSettingsProps> = ({
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-300">Layout Type</label>
             <div className="grid grid-cols-2 gap-4">
-                        {Object.entries(layoutConfigs)
-              .map(([key, config]) => (
+              {Object.entries(layoutConfigs)
+                .filter(([key]) => key === 'standard')
+                .map(([key, config]) => (
                 <button
                   key={key}
                   onClick={() => handleOptionChange('layoutType', key as LayoutType)}
@@ -278,7 +279,7 @@ export const ResumeExportSettings: React.FC<ResumeExportSettingsProps> = ({
 
       {/* Right Side - Live Preview (optional) */}
       {showInlinePreview && (
-        <div className="bg-gray-50 rounded-xl p-4 h-full flex flex-col dark:bg-dark-200">
+        <div className="bg-gray-50 rounded-xl px-0 py-4 h-full flex flex-col dark:bg-dark-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center dark:text-white">
             <Layout className="w-5 h-5 mr-2 text-green-600 dark:text-neon-green-400" />
             Live Preview
