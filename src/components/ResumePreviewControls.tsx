@@ -21,7 +21,7 @@ export const ResumePreviewControls: React.FC<ResumePreviewControlsProps> = ({
   maxZoom
 }) => {
   return (
-    <div className="flex items-center justify-between bg-gray-50 dark:bg-dark-200 px-4 py-3 border-b border-gray-200 dark:border-dark-300">
+    <div className="flex items-center justify-between bg-gray-50 dark:bg-dark-200 px-0 py-3 border-b border-gray-200 dark:border-dark-300">
       <div className="flex items-center space-x-2">
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
           Preview Controls
