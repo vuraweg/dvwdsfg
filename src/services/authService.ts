@@ -587,30 +587,25 @@ Object.keys(dbUpdates).forEach((key) => {
     }
   }
 
-    async getGlobalResumesCreatedCount(): Promise<number> {
+     async getGlobalResumesCreatedCount(): Promise<number> {
     console.log('AuthService: Fetching global resumes created count...');
     try {
-      // Count all resumes ever created from the resumes table
-      const { count, error } = await supabase
-        .from('resumes')
-        .select('*', { count: 'exact', head: true });
-
-      if (error) {
-        console.error('AuthService: Error fetching resumes count:', error);
-        return 50485; // Your current marketing number as fallback
-      }
-
-      if (!count || count === 0) {
-        console.log('AuthService: No resumes found in database, returning default.');
-        return 50485; // Your current marketing number
-      }
-
-      console.log('AuthService: Total resumes in database:', count);
-      return count;
+      const { data, error } = await supabase
+        .from('app_metrics')
+        .select('metric_value')
+        .eq('metric_name', 'total_resumes_created')
+        .single();
       
+      if (error) {
+        console.error('AuthService: Error fetching global resumes count:', error);
+        return 50000; // Return default if fetch fails
+      }
+      
+      console.log('AuthService: Global resumes count fetched successfully:', data.metric_value);
+      return data.metric_value;
     } catch (error) {
-      console.error('AuthService: Error in getGlobalResumesCreatedCount:', error);
-      return 50485; // Your current marketing number as fallback
+      console.error('AuthService: Error in getGlobalResumesCreatedCount catch block:', error);
+      return 50000; // Return default if fetch fails
     }
   }
 
