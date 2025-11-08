@@ -1055,7 +1055,7 @@ const checkForMissingSections = useCallback((resumeData: ResumeData): string[] =
                       minZoom={MIN_ZOOM}
                       maxZoom={MAX_ZOOM}
                     />
-                    <div className="bg-gray-50 dark:bg-dark-50 p-4">
+                    <div className="bg-gray-50 dark:bg-dark-50 px-0 py-4">
                       <div className="max-h-[calc(100vh-250px)] overflow-y-auto">
                         <div style={{ transform: `scale(${previewZoom})`, transformOrigin: 'top center' }}>
                           <ResumePreview
