@@ -109,6 +109,40 @@ const toPlainText = (value: any): string => {
   return String(value);
 };
 
+// ✅ ADDED: Missing helper function to detect placeholder text
+const isPlaceholderText = (text: string): boolean => {
+  if (!text || typeof text !== 'string') return true;
+  
+  const trimmed = text.trim().toLowerCase();
+  
+  // Check for empty or whitespace-only strings
+  if (trimmed.length === 0) return true;
+  
+  // Common placeholder patterns
+  const placeholderPatterns = [
+    /^placeholder$/i,
+    /^example$/i,
+    /^sample$/i,
+    /^n\/?a$/i,
+    /^none$/i,
+    /^nil$/i,
+    /^not specified$/i,
+    /^not available$/i,
+    /^\[.*\]$/,  // [Your Certification Here]
+    /^your .+ here$/i,
+    /^add .+$/i,
+    /^enter .+$/i,
+    /^-+$/,  // just dashes like "---"
+    /^\.+$/,  // just dots like "..."
+    /^to be (added|filled|updated)$/i,
+    /^pending$/i,
+    /^tbd$/i,
+    /^temp(orary)?$/i
+  ];
+  
+  return placeholderPatterns.some(pattern => pattern.test(trimmed));
+};
+
 // Helper function to trigger download on mobile
 const triggerMobileDownload = (blob: Blob, filename: string): void => {
   try {
@@ -279,53 +313,8 @@ function renderCertificationsForPDF(state: PageState, certifications: (string | 
 
   return totalHeight;
 }
-// Clean replacement for certifications rendering without placeholder text
-function renderCertificationsLegacyUnused(state: PageState, certifications: (string | Certification)[], PDF_CONFIG: any): number {
-  const normalized: { title: string; description: string }[] = (certifications || [])
-    .map((c: any) => {
-      if (typeof c === 'string') {
-        const t = toPlainText(c);
-        return isPlaceholderText(t) ? null : { title: t, description: '' };
-      }
-      if (c && typeof c === 'object') {
-        const t = toPlainText(c.title);
-        const d = toPlainText(c.description);
-        const title = isPlaceholderText(t) ? '' : t;
-        const description = isPlaceholderText(d) ? '' : d;
-        if (!title && !description) return null;
-        return { title, description };
-      }
-      return null;
-    })
-    .filter(Boolean) as { title: string; description: string }[];
 
-  if (!normalized.length) return 0;
-
-  let totalHeight = drawSectionTitle(state, 'Certifications', PDF_CONFIG);
-
-  normalized.forEach((item) => {
-    if (!checkPageSpace(state, 10, PDF_CONFIG)) addNewPage(state, PDF_CONFIG);
-
-    const primary = item.title || item.description;
-    const titleHeight = drawText(state, `- ${primary}`, PDF_CONFIG.margins.left + PDF_CONFIG.spacing.bulletIndent, PDF_CONFIG, {
-      fontWeight: 'bold',
-      maxWidth: PDF_CONFIG.contentWidth - PDF_CONFIG.spacing.bulletIndent
-    });
-    totalHeight += titleHeight;
-
-    if (item.description && item.title && item.description !== item.title) {
-      state.currentY += 1;
-      const descHeight = drawText(state, item.description, PDF_CONFIG.margins.left + PDF_CONFIG.spacing.bulletIndent * 2, PDF_CONFIG, {
-        maxWidth: PDF_CONFIG.contentWidth - (PDF_CONFIG.spacing.bulletIndent * 2)
-      });
-      totalHeight += descHeight + 1;
-    }
-
-    state.currentY += PDF_CONFIG.spacing.bulletListSpacing;
-  });
-
-  return totalHeight;
-}// Draw section title with underline and proper spacing
+// Draw section title with underline and proper spacing
 function drawSectionTitle(state: PageState, title: string, PDF_CONFIG: any): number {
   state.currentY += 1;
   const estimatedSectionHeaderHeight = PDF_CONFIG.fonts.sectionTitle.size * PDF_CONFIG.spacing.lineHeight * 0.352778 + 2;
@@ -337,8 +326,8 @@ function drawSectionTitle(state: PageState, title: string, PDF_CONFIG: any): num
     fontWeight: PDF_CONFIG.fonts.sectionTitle.weight,
     color: PDF_CONFIG.colors.primary
   });
-  const underlineY = state.currentY - (PDF_CONFIG.fonts.sectionTitle.size * 0.2); // Changed from 0.3 to 0.2
-  state.doc.setDrawColor(64, 64, 64); // Changed from 128, 128, 128 to 64, 64, 64
+  const underlineY = state.currentY - (PDF_CONFIG.fonts.sectionTitle.size * 0.2);
+  state.doc.setDrawColor(64, 64, 64);
   state.doc.setLineWidth(0.5);
   state.doc.line(PDF_CONFIG.margins.left, underlineY, PDF_CONFIG.margins.left + PDF_CONFIG.contentWidth, underlineY);
   state.currentY += PDF_CONFIG.spacing.sectionSpacingAfter;
@@ -394,9 +383,8 @@ function drawWorkExperience(state: PageState, workExperience: any[], userType: U
 
     const yearText = job.year;
     
-    // MODIFIED: Added isValidField check for job.year
     if (isValidField(yearText)) {
-      state.doc.setFont(PDF_CONFIG.fontFamily, 'normal'); // Changed to normal
+      state.doc.setFont(PDF_CONFIG.fontFamily, 'normal');
       state.doc.setFontSize(PDF_CONFIG.fonts.year.size);
       const yearWidth = state.doc.getTextWidth(yearText);
       const yearX = PDF_CONFIG.margins.left + PDF_CONFIG.contentWidth - yearWidth;
@@ -407,8 +395,8 @@ function drawWorkExperience(state: PageState, workExperience: any[], userType: U
 
     drawText(state, combinedTitle, PDF_CONFIG.margins.left, PDF_CONFIG, {
       fontSize: PDF_CONFIG.fonts.jobTitle.size,
-      fontWeight: 'bold', // Changed to bold
-      maxWidth: PDF_CONFIG.contentWidth - (isValidField(yearText) ? state.doc.getTextWidth(yearText) : 0) - 5 // Adjust maxWidth if year is present
+      fontWeight: 'bold',
+      maxWidth: PDF_CONFIG.contentWidth - (isValidField(yearText) ? state.doc.getTextWidth(yearText) : 0) - 5
     });
 
     state.currentY += PDF_CONFIG.spacing.bulletListSpacing;
@@ -447,12 +435,12 @@ function drawEducation(state: PageState, education: any[], PDF_CONFIG: any): num
     }
     const degreeHeight = drawText(state, edu.degree, PDF_CONFIG.margins.left, PDF_CONFIG, {
       fontSize: PDF_CONFIG.fonts.jobTitle.size,
-      fontWeight: PDF_CONFIG.fonts.jobTitle.weight // Already bold
+      fontWeight: PDF_CONFIG.fonts.jobTitle.weight
     });
     const schoolText = `${edu.school}${isValidField(edu.location) ? `, ${edu.location}` : ''}`;
     const schoolHeight = drawText(state, schoolText, PDF_CONFIG.margins.left, PDF_CONFIG, {
       fontSize: PDF_CONFIG.fonts.company.size,
-      fontWeight: 'normal', // Changed to normal
+      fontWeight: 'normal',
       color: PDF_CONFIG.colors.primary
     });
     let cgpaHeight = 0;
@@ -463,19 +451,18 @@ function drawEducation(state: PageState, education: any[], PDF_CONFIG: any): num
         color: PDF_CONFIG.colors.secondary
       });
     }
-    // Removed edu.relevantCoursework block
-    // MODIFIED: Removed redundant setFont call and added isValidField check
+    
     state.doc.setFontSize(PDF_CONFIG.fonts.year.size);
     state.doc.setTextColor(PDF_CONFIG.colors.primary[0], PDF_CONFIG.colors.primary[1], PDF_CONFIG.colors.primary[2]);
     
-    if (isValidField(edu.year)) { // ADDED: Check if edu.year is valid
+    if (isValidField(edu.year)) {
       const yearText = edu.year;
-      state.doc.setFont(PDF_CONFIG.fontFamily, 'bold'); // Ensure year is bold
+      state.doc.setFont(PDF_CONFIG.fontFamily, 'bold');
       const yearWidth = state.doc.getTextWidth(yearText);
-      const yearX = PDF_CONFIG.margins.left + PDF_CONFIG.contentWidth - yearWidth; // CORRECTED calculation
+      const yearX = PDF_CONFIG.margins.left + PDF_CONFIG.contentWidth - yearWidth;
       const yearY = initialYForEdu + (PDF_CONFIG.fonts.jobTitle.size * 0.352778 * 0.5);
       state.doc.text(yearText, yearX, yearY);
-      state.doc.setFont(PDF_CONFIG.fontFamily, 'normal'); // Reset font to normal after drawing year
+      state.doc.setFont(PDF_CONFIG.fontFamily, 'normal');
     }
     totalHeight += degreeHeight + schoolHeight + cgpaHeight;
     if (index < education.length - 1) {
@@ -485,7 +472,6 @@ function drawEducation(state: PageState, education: any[], PDF_CONFIG: any): num
   });
   return totalHeight;
 }
-
 
 // Draw projects section
 function drawProjects(state: PageState, projects: any[], PDF_CONFIG: any): number {
@@ -501,7 +487,7 @@ function drawProjects(state: PageState, projects: any[], PDF_CONFIG: any): numbe
 
     const titleHeight = drawText(state, project.title, PDF_CONFIG.margins.left, PDF_CONFIG, {
       fontSize: PDF_CONFIG.fonts.jobTitle.size,
-      fontWeight: PDF_CONFIG.fonts.jobTitle.weight // Already bold
+      fontWeight: PDF_CONFIG.fonts.jobTitle.weight
     });
     totalHeight += titleHeight;
     state.currentY += PDF_CONFIG.spacing.bulletListSpacing;
@@ -528,7 +514,6 @@ function drawProjects(state: PageState, projects: any[], PDF_CONFIG: any): numbe
   return totalHeight;
 }
 
-
 // Draw skills section
 function drawSkills(state: PageState, skills: any[], PDF_CONFIG: any): number {
   if (!skills || skills.length === 0) return 0;
@@ -545,7 +530,7 @@ function drawSkills(state: PageState, skills: any[], PDF_CONFIG: any): number {
     const categoryText = `${skill.category}: `;
     const listText = skill.list ? skill.list.join(', ') : '';
 
-    state.doc.setFont(PDF_CONFIG.fontFamily, 'bold'); // Already bold
+    state.doc.setFont(PDF_CONFIG.fontFamily, 'bold');
     state.doc.setFontSize(PDF_CONFIG.fonts.body.size);
     state.doc.setTextColor(PDF_CONFIG.colors.primary[0], PDF_CONFIG.colors.primary[1], PDF_CONFIG.colors.primary[2]);
 
@@ -576,7 +561,6 @@ function drawSkills(state: PageState, skills: any[], PDF_CONFIG: any): number {
   return totalHeight;
 }
 
-
 // Draw certifications section
 function drawCertifications(state: PageState, certifications: (string | Certification)[], PDF_CONFIG: any): number {
   let totalHeight = drawSectionTitle(state, 'Certifications', PDF_CONFIG);
@@ -595,7 +579,7 @@ function drawCertifications(state: PageState, certifications: (string | Certific
       addNewPage(state, PDF_CONFIG);
     }
 
-    if (typeof cert === 'object' && cert !== null && 'title' in cert) { // Check for 'title' property
+    if (typeof cert === 'object' && cert !== null && 'title' in cert) {
       const titleText = `• ${cert.title}`;
       const titleHeight = drawText(state, titleText, PDF_CONFIG.margins.left + PDF_CONFIG.spacing.bulletIndent, PDF_CONFIG, {
         fontWeight: 'bold',
@@ -603,8 +587,8 @@ function drawCertifications(state: PageState, certifications: (string | Certific
       });
       totalHeight += titleHeight;
 
-      if ('description' in cert && cert.description) { // Check for 'description' property
-        state.currentY += 1; // Small gap
+      if ('description' in cert && cert.description) {
+        state.currentY += 1;
         const descHeight = drawText(state, cert.description, PDF_CONFIG.margins.left + PDF_CONFIG.spacing.bulletIndent * 2, PDF_CONFIG, {
           maxWidth: PDF_CONFIG.contentWidth - (PDF_CONFIG.spacing.bulletIndent * 2)
         });
@@ -697,7 +681,6 @@ function drawAdditionalSection(state: PageState, section: { title: string; bulle
   return totalHeight;
 }
 
-
 // Main export function with mobile optimization
 export const exportToPDF = async (resumeData: ResumeData, userType: UserType = 'experienced', options: ExportOptions = defaultExportOptions): Promise<void> => {
   // Validate resume data before attempting export
@@ -717,6 +700,8 @@ export const exportToPDF = async (resumeData: ResumeData, userType: UserType = '
     }
 
     console.log('Initializing PDF document...');
+    console.log('[PDF Export] Resume data certifications:', resumeData.certifications); // Debug log
+    
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
     const state: PageState = { currentPage: 1, currentY: PDF_CONFIG.margins.top, doc };
     doc.setProperties({
@@ -752,14 +737,12 @@ export const exportToPDF = async (resumeData: ResumeData, userType: UserType = '
 
     // Align section order with ResumePreview.tsx
     if (userType === 'experienced') {
-        // Preview order: summary, education, workExperience, projects, skills, certifications
         safeDraw('Education', () => drawEducation(state, resumeData.education, PDF_CONFIG));
         safeDraw('WorkExperience', () => drawWorkExperience(state, resumeData.workExperience, userType, PDF_CONFIG));
         safeDraw('Projects', () => drawProjects(state, resumeData.projects, PDF_CONFIG));
         safeDraw('Skills', () => drawSkills(state, resumeData.skills, PDF_CONFIG));
         safeDraw('Certifications', () => renderCertificationsForPDF(state, resumeData.certifications, PDF_CONFIG));
     } else if (userType === 'student') {
-        // Preview order: careerObjective, education, workExperience, projects, skills, certifications, achievements
         safeDraw('Education', () => drawEducation(state, resumeData.education, PDF_CONFIG));
         safeDraw('WorkExperience', () => drawWorkExperience(state, resumeData.workExperience, userType, PDF_CONFIG));
         safeDraw('Projects', () => drawProjects(state, resumeData.projects, PDF_CONFIG));
@@ -767,7 +750,6 @@ export const exportToPDF = async (resumeData: ResumeData, userType: UserType = '
         safeDraw('Certifications', () => renderCertificationsForPDF(state, resumeData.certifications, PDF_CONFIG));
         safeDraw('Achievements', () => drawAchievementsAndExtras(state, resumeData, PDF_CONFIG));
     } else { // Fresher
-        // Preview order: careerObjective, education, workExperience, projects, skills, certifications, achievements
         safeDraw('Education', () => drawEducation(state, resumeData.education, PDF_CONFIG));
         safeDraw('WorkExperience', () => drawWorkExperience(state, resumeData.workExperience, userType, PDF_CONFIG));
         safeDraw('Projects', () => drawProjects(state, resumeData.projects, PDF_CONFIG));
@@ -817,7 +799,7 @@ export const exportToPDF = async (resumeData: ResumeData, userType: UserType = '
   }
 };
 
-// Centralized getFileName function (from exportUtils.ts)
+// Centralized getFileName function
 export const getFileName = (resumeData: ResumeData, fileExtension: 'pdf' | 'doc'): string => {
     const namePart = resumeData.name.replace(/\s+/g, '_');
     const rolePart = resumeData.targetRole ? `_${resumeData.targetRole.replace(/\s+/g, '_')}` : '';
@@ -838,6 +820,7 @@ export const exportToWord = async (resumeData: ResumeData, userType: UserType = 
   const fileName = getFileName(resumeData, 'doc');
   try {
     console.log('Generating Word document...');
+    console.log('[Word Export] Resume data certifications:', resumeData.certifications); // Debug log
     const htmlContent = generateWordHTMLContent(resumeData, userType);
     console.log('Word HTML content generated successfully');
     const blob = new Blob([htmlContent], { type: 'application/vnd.ms-word' });
@@ -866,7 +849,7 @@ const generateWordHTMLContent = (data: ResumeData, userType: UserType = 'experie
         if (linkType === 'http') return `<a href="${part}" target="_blank" rel="noopener noreferrer" style="color: #2563eb !important; text-decoration: underline !important;">${part}</a>`;
         return part;
       }).join(' | ');
-      contactParts.push(`${content}`); // Removed label for cleaner display
+      contactParts.push(`${content}`);
     }
   };
 
@@ -960,17 +943,23 @@ const generateWordHTMLContent = (data: ResumeData, userType: UserType = 'experie
     </div>
   ` : '';
 
+  // ✅ FIXED: Removed isPlaceholderText filtering for Word export to match PDF behavior
   const certificationsHtml = data.certifications && data.certifications.length > 0 ? `
     <div style="margin-top: 5pt;">
       <div class="section-title" style="font-size: 10pt; font-weight: bold; margin-bottom: 4pt; text-transform: uppercase; letter-spacing: 0.5pt; font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">CERTIFICATIONS</div>
       <div class="section-underline" style="border-bottom: 0.5pt solid #808080; margin-bottom: 4pt; height: 1px;"></div>
       <ul class="bullets" style="margin-left: 5mm; margin-bottom: 6pt; margin-top: 6pt; list-style-type: disc;">
         ${data.certifications
-          .filter((cert: any) =>
-            typeof cert === 'string'
-              ? (String(cert).trim().length > 0 && !isPlaceholderText(String(cert)))
-              : (cert && (!isPlaceholderText(toPlainText(cert.title)) || !isPlaceholderText(toPlainText(cert.description))))
-          )
+          .filter((cert: any) => {
+            // Simple validation - just check if cert exists and is not empty
+            if (typeof cert === 'string') {
+              return cert.trim().length > 0;
+            }
+            if (cert && typeof cert === 'object') {
+              return Boolean(toPlainText(cert.title) || toPlainText(cert.description));
+            }
+            return false;
+          })
           .map((cert: any) => {
           let certText = '';
           if (typeof cert === 'object' && cert !== null) {
@@ -1007,7 +996,6 @@ const generateWordHTMLContent = (data: ResumeData, userType: UserType = 'experie
   </div>
 ` : '';
 
-
   const additionalSectionsHtml = data.additionalSections && data.additionalSections.length > 0 ? `
     ${data.additionalSections.map(section => `
       <div style="margin-top: 5pt;">
@@ -1021,7 +1009,6 @@ const generateWordHTMLContent = (data: ResumeData, userType: UserType = 'experie
   ` : '';
 
   if (userType === 'experienced') {
-    // Match ResumePreview order
     sectionOrderHtml = `
       ${summaryHtml}
       ${educationHtml}
@@ -1066,10 +1053,10 @@ const generateWordHTMLContent = (data: ResumeData, userType: UserType = 'experie
       <title>${data.name} - Resume</title>
       <style>
         @page {
-          margin-top: 17.78mm !important; /* ~0.7 inch */
-          margin-bottom: 17.78mm !important; /* ~0.7 inch */
-          margin-left: 17.78mm !important; /* ~0.7 inch */
-          margin-right: 17.78mm !important; /* ~0.7 inch */
+          margin-top: 17.78mm !important;
+          margin-bottom: 17.78mm !important;
+          margin-left: 17.78mm !important;
+          margin-right: 17.78mm !important;
         }
 
         body {
@@ -1120,9 +1107,9 @@ const generateWordHTMLContent = (data: ResumeData, userType: UserType = 'experie
         .header-line {
           border: none !important;
           border-top: 0.5pt solid #404040 !important;
-          margin: 0 0 !important; /* Remove horizontal margin */
+          margin: 0 0 !important;
           height: 1px !important;
-          width: 100% !important; /* Ensure line spans full content width */
+          width: 100% !important;
         }
         .section-title {
           font-size: 10pt !important;
@@ -1138,7 +1125,6 @@ const generateWordHTMLContent = (data: ResumeData, userType: UserType = 'experie
           margin-bottom: 4pt !important;
           height: 1px !important;
         }
-        /* Removed .job-header, .edu-header flex styles as they are replaced by table */
         .job-title, .degree {
           font-size: 9.5pt !important;
           font-weight: bold !important;
@@ -1146,7 +1132,7 @@ const generateWordHTMLContent = (data: ResumeData, userType: UserType = 'experie
         }
         .company, .school {
           font-size: 9.5pt !important;
-          font-weight: normal !important; /* Changed to normal */
+          font-weight: normal !important;
           font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
         }
         .year {
@@ -1155,14 +1141,14 @@ const generateWordHTMLContent = (data: ResumeData, userType: UserType = 'experie
           font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
         }
         .bullets {
-          margin-left: 5mm !important; /* Changed from 4mm to 5mm */
+          margin-left: 5mm !important;
           margin-bottom: 4pt !important;
           margin-top: 2pt !important;
         }
         .bullet {
           font-size: 9.5pt !important;
-          line-height: 1.25 !important; /* Changed from 1.4 to 1.25 */
-          margin: 0 0 1pt 0 !important; /* Changed from 2pt to 1pt */
+          line-height: 1.25 !important;
+          margin: 0 0 1pt 0 !important;
           font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
         }
         .skills-item {
@@ -1199,7 +1185,3 @@ const generateWordHTMLContent = (data: ResumeData, userType: UserType = 'experie
     </html>
   `;
 };
-
-
-
-
