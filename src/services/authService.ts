@@ -587,7 +587,8 @@ Object.keys(dbUpdates).forEach((key) => {
     }
   }
 
-     async getGlobalResumesCreatedCount(): Promise<number> {
+  // Return total resumes created (app-wide)
+  async getGlobalResumesCreatedCount(): Promise<number> {
     console.log('AuthService: Fetching global resumes created count...');
     try {
       const { data, error } = await supabase
@@ -606,6 +607,66 @@ Object.keys(dbUpdates).forEach((key) => {
     } catch (error) {
       console.error('AuthService: Error in getGlobalResumesCreatedCount catch block:', error);
       return 50000; // Return default if fetch fails
+    }
+  }
+
+  // Increment current user's resume count (user_profiles.resumes_created_count)
+  async incrementResumesCreatedCount(userId: string): Promise<number> {
+    try {
+      const profile = await this.fetchUserProfile(userId);
+      const current = profile?.resumes_created_count ?? 0;
+      const next = current + 1;
+
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ resumes_created_count: next })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('AuthService: Failed to update resumes_created_count:', error);
+        throw new Error(error.message);
+      }
+
+      console.log('AuthService: resumes_created_count incremented to', next);
+      return next;
+    } catch (err) {
+      console.error('AuthService: Error incrementing user resumes count:', err);
+      throw err;
+    }
+  }
+
+  // Increment global metric total_resumes_created in app_metrics
+  async incrementGlobalResumesCreatedCount(): Promise<number> {
+    try {
+      // Read current value
+      const { data, error } = await supabase
+        .from('app_metrics')
+        .select('metric_value')
+        .eq('metric_name', 'total_resumes_created')
+        .maybeSingle();
+
+      if (error) {
+        console.error('AuthService: Error reading app_metrics:', error);
+      }
+
+      const current = data?.metric_value ?? 0;
+      const next = current + 1;
+
+      // Upsert new value
+      const { error: upsertError } = await supabase
+        .from('app_metrics')
+        .upsert({ metric_name: 'total_resumes_created', metric_value: next }, { onConflict: 'metric_name' });
+
+      if (upsertError) {
+        console.error('AuthService: Failed to upsert total_resumes_created:', upsertError);
+        throw new Error(upsertError.message);
+      }
+
+      console.log('AuthService: total_resumes_created incremented to', next);
+      return next;
+    } catch (err) {
+      console.error('AuthService: Error incrementing global resumes count:', err);
+      throw err;
     }
   }
 
