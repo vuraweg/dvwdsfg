@@ -332,12 +332,15 @@ const checkForMissingSections = useCallback((resumeData: ResumeData): string[] =
     missing.push('education');
   }
 
-  // Check certifications - must have at least 1 real certification
+  // Check certifications - must have at least 1 real certification (handle flexible shapes)
   if (!resumeData.certifications || 
       resumeData.certifications.length === 0 || 
       resumeData.certifications.every(cert => {
-        const certText = typeof cert === 'string' ? cert : cert.title;
-        return !certText?.trim() || isPlaceholderContent(certText);
+        const c: any = cert as any;
+        const certText = typeof cert === 'string'
+          ? cert
+          : (c?.title || c?.name || c?.text || c?.value || '');
+        return !String(certText).trim() || isPlaceholderContent(String(certText));
       })) {
     missing.push('certifications');
   }
@@ -379,6 +382,44 @@ const checkForMissingSections = useCallback((resumeData: ResumeData): string[] =
       );
       const beforeScoreData = generateBeforeScore(reconstructResumeText(resumeData));
       setBeforeScore(beforeScoreData);
+      // Merge in user's saved certifications from profile if optimizer returned none
+      try {
+        if ((!finalOptimizedResume.certifications || finalOptimizedResume.certifications.length === 0) && user) {
+          const profile = await authService.fetchUserProfile(user.id);
+          const normalizeCerts = (items: any[]): (string | { title: string; description: string })[] => {
+            return (items || [])
+              .map((item: any) => {
+                if (typeof item === 'string') {
+                  const s = item.trim();
+                  return s.length > 0 ? s : null;
+                }
+                if (item && typeof item === 'object') {
+                  const primary: string = (item.title || item.name || item.certificate || item.text || item.value || item.issuer || item.provider || '').toString().trim();
+                  const desc: string = (item.description || item.issuer || item.provider || '').toString().trim();
+                  if (!primary && !desc) return null;
+                  return { title: primary || desc, description: desc && desc !== primary ? desc : '' };
+                }
+                return null;
+              })
+              .filter(Boolean) as (string | { title: string; description: string })[];
+          };
+          const profileCerts = normalizeCerts((profile as any)?.certifications_details || []);
+          if (profileCerts.length > 0) {
+            const seen = new Set<string>();
+            finalOptimizedResume.certifications = (finalOptimizedResume.certifications || []).concat(
+              profileCerts.filter((c: any) => {
+                const key = typeof c === 'string' ? c.toLowerCase() : (c.title || c.description || '').toLowerCase();
+                if (!key || seen.has(key)) return false;
+                seen.add(key);
+                return true;
+              })
+            );
+          }
+        }
+      } catch (mergeErr) {
+        console.warn('ResumeOptimizer: Could not merge profile certifications:', mergeErr);
+      }
+
       const finalScore = await getDetailedResumeScore(finalOptimizedResume, jobDescription, setIsCalculatingScore);
       setFinalResumeScore(finalScore);
       const afterScoreData = await generateAfterScore(finalOptimizedResume, jobDescription);
